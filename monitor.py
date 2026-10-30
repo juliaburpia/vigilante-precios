@@ -26,6 +26,7 @@ REPORTE = os.environ.get("REPORTE", "0") == "1"
 
 INICIO = time.time()
 ESTADOS = {}  # última respuesta de cada tienda, para el reporte
+DEBUG = {}
 TIEMPO_MAXIMO = CONFIG.get("tiempo_maximo_segundos", 420)
 
 S = requests.Session()
@@ -231,6 +232,8 @@ def leer_html(t):
                 break
             prods = productos_fenicio(r.text) or productos_jsonld(r.text, url)
             if not prods:
+                i = r.text.find("precioMonto")
+                DEBUG[urlparse(url).netloc] = r.text[max(0, i - 1500):i + 500] if i >= 0 else r.text[:3000]
                 titulo = re.search(r"<title[^>]*>(.*?)</title>", r.text, re.S | re.I)
                 ESTADOS[urlparse(url).netloc] = (f"página sin productos ({len(r.text)} bytes, status {r.status_code}, "
                     f"title: {titulo.group(1).strip()[:60] if titulo else '-'}, precioMonto: {r.text.count('precioMonto')}, "
@@ -450,6 +453,7 @@ def main():
     if REPORTE:
         telegram("📋 <b>Reporte del vigilante</b>\n" + "\n".join(esc(x) for x in resumen))
 
+    datos["debug"] = DEBUG
     with open(ARCHIVO_PRECIOS, "w", encoding="utf-8") as f:
         json.dump(datos, f, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
 
