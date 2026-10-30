@@ -1,0 +1,97 @@
+{
+  "dolar_en_pesos": 40,
+  "caida_minima": 0.6,
+  "fraccion_vs_parecidos": 0.25,
+  "referencia_minima_pesos": 250,
+  "maximo_avisos_por_vuelta": 15,
+  "tiempo_maximo_segundos": 420,
+  "tiendas_a_la_vez": 6,
+  "avisar_primera_vez_por_minimos": true,
+
+  "minimos_por_palabra": {
+    "pendrive": 150,
+    "memoria micro sd": 150,
+    "macbook": 15000,
+    "iphone": 8000,
+    "ipad": 7000,
+    "notebook": 7000,
+    "laptop": 7000,
+    "playstation": 9000,
+    "ps5": 9000,
+    "xbox series": 9000,
+    "nintendo switch": 7000,
+    "smart tv": 4000,
+    "televisor": 4000,
+    "celular": 2500,
+    "smartphone": 2500,
+    "tablet": 2500,
+    "monitor": 2500,
+    "airpods": 2500,
+    "apple watch": 5000,
+    "drone": 3000,
+    "heladera": 8000,
+    "refrigerador": 8000,
+    "freezer": 6000,
+    "lavarropas": 8000,
+    "lavasecarropas": 12000,
+    "secarropas": 6000,
+    "lavavajillas": 10000,
+    "aire acondicionado": 8000,
+    "cocina a gas": 5000,
+    "horno eléctrico": 2000,
+    "microondas": 2000,
+    "aspiradora robot": 3000,
+    "hidrolavadora": 2000,
+    "taladro": 900,
+    "amoladora": 900,
+    "rotomartillo": 1500,
+    "compresor": 2500,
+    "generador": 5000,
+    "soldadora": 2500,
+    "motosierra": 2000,
+    "bordeadora": 1500,
+    "cortadora de césped": 3500
+  },
+
+  "listas_de_busqueda": {
+    "electro_hogar": [
+      "heladera", "lavarropas", "aire acondicionado", "televisor", "smart tv",
+      "notebook", "celular", "tablet", "microondas", "aspiradora", "freezer",
+      "secarropas", "cocina", "horno", "parlante", "auriculares", "consola",
+      "monitor", "taladro", "colchon", "sommier"
+    ]
+  },
+
+  "palabras_excluidas": [
+    "funda", "estuche", "case", "vidrio", "film", "lámina", "protector",
+    "cable", "cargador", "adaptador", "soporte", "correa", "malla", "repuesto",
+    "control remoto", "filtro", "bolsa", "tapa", "mochila", "sobre", "skin",
+    "mecha", "broca", "disco", "accesorio", "batería para", "lámpara para",
+    "manguera", "burlete", "cepillo", "kit de limpieza", "juego para", "sticker"
+  ],
+
+  "tiendas": [
+    {"nombre": "ZonaTecno", "url": "https://www.zonatecno.com.uy", "tipo": "html",
+     "paginas": ["/catalogo?grp=1", "/catalogo"], "max_paginas": 120},
+    {"nombre": "Banifox", "url": "https://www.banifox.com"},
+    {"nombre": "Thot Computación", "url": "https://www.thotcomputacion.com.uy"},
+    {"nombre": "PCMaster", "url": "https://www.pcmaster.com.uy"},
+    {"nombre": "Tiendamia", "url": "https://tiendamia.com/uy", "tipo": "html",
+     "paginas": ["/ofertas", "/"], "max_paginas": 20},
+
+    {"nombre": "Tienda Inglesa", "url": "https://www.tiendainglesa.com.uy", "busquedas": "electro_hogar"},
+    {"nombre": "Divino", "url": "https://www.divino.com.uy"},
+    {"nombre": "Emporio del Hogar", "url": "https://www.emporiodelhogar.com.uy"},
+    {"nombre": "Devoto", "url": "https://www.devoto.com.uy", "busquedas": "electro_hogar"},
+    {"nombre": "Géant", "url": "https://www.geant.com.uy", "busquedas": "electro_hogar"},
+    {"nombre": "Multiahorro Hogar", "url": "https://www.multiahorro.com.uy"},
+    {"nombre": "Loi", "url": "https://www.loi.com.uy"},
+
+    {"nombre": "Sodimac", "url": "https://www.sodimac.com.uy"},
+    {"nombre": "El Insuperable", "url": "https://www.elinsuperable.com.uy"},
+    {"nombre": "Ferretería del Sur", "url": "https://ferreteriadelsur.com.uy"},
+    {"nombre": "Herramientas Total", "url": "https://herramientastotal.com", "tipo": "html",
+     "paginas": ["/catalogo"]},
+    {"nombre": "Ferrefix", "url": "https://ferrefixuru.com"}
+  ]
+}
