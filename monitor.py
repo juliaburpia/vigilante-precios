@@ -231,7 +231,10 @@ def leer_html(t):
                 break
             prods = productos_fenicio(r.text) or productos_jsonld(r.text, url)
             if not prods:
-                ESTADOS[urlparse(url).netloc] = f"página sin productos ({len(r.text)} bytes)"
+                titulo = re.search(r"<title[^>]*>(.*?)</title>", r.text, re.S | re.I)
+                ESTADOS[urlparse(url).netloc] = (f"página sin productos ({len(r.text)} bytes, status {r.status_code}, "
+                    f"title: {titulo.group(1).strip()[:60] if titulo else '-'}, precioMonto: {r.text.count('precioMonto')}, "
+                    f"sku: {r.text.count('sku')}, ld: {r.text.count('ld+json')}, url final: {r.url[:80]})")
             nuevos = [p for p in prods if p["id"] not in vistos]
             if not nuevos:
                 break
