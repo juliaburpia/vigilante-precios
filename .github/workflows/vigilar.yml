@@ -1,0 +1,46 @@
+name: Vigilar precios
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+    inputs:
+      reporte:
+        description: "Mandarme por Telegram cuántos productos leyó de cada tienda"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vigilar-precios
+  cancel-in-progress: false
+
+jobs:
+  vigilar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Revisar tiendas
+        run: python monitor.py
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          REPORTE: ${{ (github.event_name == 'workflow_dispatch' && inputs.reporte) && '1' || '0' }}
+
+      - name: Guardar historial de precios
+        run: |
+          git config user.name "vigilante-precios"
+          git config user.email "vigilante-precios@users.noreply.github.com"
+          git add precios.json
+          git diff --cached --quiet || (git commit -m "Actualizar precios" && git pull --rebase && git push)
