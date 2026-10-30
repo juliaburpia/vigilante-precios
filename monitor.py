@@ -12,7 +12,7 @@ import statistics
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import requests
 
@@ -25,6 +25,7 @@ CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
 REPORTE = os.environ.get("REPORTE", "0") == "1"
 
 INICIO = time.time()
+ESTADOS = {}  # última respuesta de cada tienda, para el reporte
 TIEMPO_MAXIMO = CONFIG.get("tiempo_maximo_segundos", 420)
 
 S = requests.Session()
@@ -44,8 +45,9 @@ def pedir(url):
         r = S.get(url, timeout=20)
         if r.ok:
             return r
-    except requests.RequestException:
-        pass
+        ESTADOS[urlparse(url).netloc] = f"error {r.status_code}"
+    except requests.RequestException as e:
+        ESTADOS[urlparse(url).netloc] = type(e).__name__
     return None
 
 
@@ -228,6 +230,8 @@ def leer_html(t):
             if not r:
                 break
             prods = productos_fenicio(r.text) or productos_jsonld(r.text, url)
+            if not prods:
+                ESTADOS[urlparse(url).netloc] = f"página sin productos ({len(r.text)} bytes)"
             nuevos = [p for p in prods if p["id"] not in vistos]
             if not nuevos:
                 break
@@ -424,7 +428,8 @@ def main():
                              f"Puede ser un cambio general de la página (o una liquidación). Revisalo: {esc(t['url'])}")
             elif not primera_vez or CONFIG.get("avisar_primera_vez_por_minimos", True):
                 todas.extend(alertas)
-            resumen.append(f"{'✅' if prods else '❌'} {t['nombre']} ({tipo}): {len(prods)} productos")
+            resumen.append(f"{'✅' if prods else '❌'} {t['nombre']} ({tipo}): {len(prods)} productos"
+                           + ("" if prods else f" [{ESTADOS.get(urlparse(t['url']).netloc, 'sin datos')}]"))
         except Exception as e:  # una tienda que falla no frena a las demás
             resumen.append(f"❌ {t['nombre']}: error {type(e).__name__}")
         print(resumen[-1])
