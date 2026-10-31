@@ -272,7 +272,12 @@ def leer_loi(t):
                 if p.get("producto_no_disponible") or not p.get("precio_numerico") or p.get("id") in vistos:
                     continue
                 vistos.add(p.get("id"))
-                out.append(dict(id=f"l{p.get('id')}", nombre=p.get("titulo", ""),
+                # Loi corta el título ("Smartwatch HONOR Watch") y pone el modelo al inicio del subtítulo ("X5i con Pantalla...")
+                modelo = re.split(r"(?:^|\s+)con\s+|,|\s+-\s+|\s+\+\s+", (p.get("subtitulo") or "").strip(), maxsplit=1)[0]
+                nombre = p.get("titulo", "") + (f" {modelo}" if modelo and len(modelo) <= 25 else "")
+                fab = p.get("fabricante")
+                marca = fab.get("nombre") if isinstance(fab, dict) else fab
+                out.append(dict(id=f"l{p.get('id')}", nombre=nombre, marca=marca,
                                 precio=float(p["precio_numerico"]),
                                 moneda="USD" if "U" in str(p.get("moneda", "")).upper() else "UYU",
                                 url=f"https://loi.com.uy/{p.get('urlseo') or p.get('slug')}"))
@@ -375,19 +380,29 @@ def esc(s):
 PALABRAS_VACIAS = {"de", "con", "para", "y", "el", "la", "los", "las", "en", "x", "-", "+", "t"}
 
 
-def familia(nombre):
-    """Primeras 3 palabras útiles del nombre: 'Pendrive SanDisk Fortnite edición...' -> 'pendrive sandisk fortnite'."""
-    palabras = [w for w in re.findall(r"[a-záéíóúñü0-9]+", nombre.lower())
-                if w not in PALABRAS_VACIAS and not re.fullmatch(r"\d+(gb|tb|mb)?", w)]
-    return " ".join(palabras[:3]) if len(palabras) >= 3 else None
+CAPACIDAD = re.compile(r"\d+(gb|tb|mb)")
+
+
+def familia(nombre, marca=None):
+    """Agrupa solo productos del mismo tipo, marca y modelo.
+    'Smartwatch HONOR Watch X5i' y 'Smartwatch HONOR Watch 6' quedan en grupos distintos,
+    pero 'Pendrive SanDisk Fortnite 64GB' y '... 128GB' quedan juntos (solo cambia la capacidad)."""
+    palabras = [w for w in re.findall(r"[a-záéíóúñü0-9]+", nombre.lower()) if w not in PALABRAS_VACIAS]
+    texto = [w for w in palabras if not re.search(r"\d", w)][:3]
+    modelo = sorted({w for w in palabras if re.search(r"\d", w) and not CAPACIDAD.fullmatch(w)})
+    if len(texto) < 2:
+        return None
+    marca = (marca or "").lower().strip()
+    clave = ([marca] if marca and marca not in texto else []) + texto + modelo
+    return " ".join(clave)
 
 
 def precios_por_familia(t, prods):
     grupos = {}
     for p in prods:
-        f = familia(p.get("nombre", ""))
+        f = familia(p.get("nombre", ""), p.get("marca"))
         if f and p.get("precio"):
-            grupos.setdefault(f, []).append((p["id"], a_pesos(p["precio"], p.get("moneda"), t)))
+            grupos.setdefault(f, []).append((p["id"], a_pesos(p["precio"], p.get("moneda"), t), p.get("nombre", "")))
     return grupos
 
 
@@ -427,13 +442,15 @@ def revisar_tienda(t, prods, hist, ahora):
             h["k"] = False
 
         # Comparación con productos parecidos de la misma tienda (sirve aunque sea la primera vez que lo ve)
-        otros = [pz for i, pz in grupos.get(familia(p["nombre"]) or "", []) if i != p["id"]]
+        otros = [(pz, n) for i, pz, n in grupos.get(familia(p["nombre"], p.get("marca")) or "", []) if i != p["id"]]
         if len(otros) >= CONFIG.get("parecidos_minimos", 1):
-            normal = statistics.median(otros)
+            normal = statistics.median(pz for pz, _ in otros)
             if normal >= CONFIG["referencia_minima_pesos"] and pesos < normal * CONFIG.get("fraccion_vs_parecidos", 0.25):
                 if not h.get("f"):
                     normal_txt = f"$ {normal:,.0f}".replace(",", ".")
-                    motivo = motivo or f"Productos parecidos en la tienda cuestan unos {normal_txt}"
+                    ejemplo = min(otros, key=lambda x: abs(x[0] - normal))[1]
+                    motivo = motivo or (f"El mismo modelo/marca en la tienda cuesta unos {normal_txt} "
+                                        f"(ej: {ejemplo[:70]})")
                     h["f"] = True
             else:
                 h["f"] = False
