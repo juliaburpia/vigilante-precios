@@ -320,6 +320,30 @@ def leer_loi(t):
     return out
 
 
+def leer_carlos_gutierrez(t):
+    """Carlos Gutiérrez: API propia. Recorre todas las subfamilias del menú y toma el precio contado."""
+    api, out, vistos = "https://api.carlosgutierrez.com.uy/CGSAWebApiV2/api", [], set()
+    r = pedir(f"{api}/home/menus")
+    menus = json_de(r) if r else None
+    subs = [s.get("SFAID") for f in (menus or []) for s in (f.get("SubFamiliaArticulos") or [])]
+    for sid in subs:
+        if not queda_tiempo():
+            break
+        r = pedir(f"{api}/articulos/Agrupados/?idSubFamilia={sid}&idGrupo=0")
+        for a in (json_de(r) if r else None) or []:
+            if a.get("ArtId") in vistos or not a.get("HabilitadoVenta", True) or not a.get("Stock"):
+                continue
+            precios = [p.get("PViPrecio") for p in a.get("PrecioVigente") or [] if p.get("PViPrecio")]
+            if not precios:
+                continue
+            vistos.add(a.get("ArtId"))
+            out.append(dict(id=f"cg{a['ArtId']}", nombre=(a.get("ArtNombre") or "").strip(),
+                            marca=((a.get("Marca") or {}).get("MarNombre") or "").strip(),
+                            precio=float(min(precios)), moneda="UYU",
+                            url=f"https://www.carlosgutierrez.com.uy/products/{a['ArtId']}"))
+    return out
+
+
 def slug(texto):
     import unicodedata
     t = unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode().lower()
@@ -362,7 +386,8 @@ def leer_sodimac(t):
 
 
 LECTORES = {"shopify": leer_shopify, "woocommerce": leer_woocommerce,
-            "vtex": leer_vtex, "html": leer_html, "loi": leer_loi, "sodimac": leer_sodimac}
+            "vtex": leer_vtex, "html": leer_html, "loi": leer_loi, "sodimac": leer_sodimac,
+            "carlos_gutierrez": leer_carlos_gutierrez}
 
 
 def detectar_tipo(t):

@@ -85,6 +85,7 @@
      "paginas": ["/ofertas", "/"], "max_paginas": 20},
 
     {"nombre": "Tienda Inglesa", "url": "https://www.tiendainglesa.com.uy", "busquedas": "electro_hogar"},
+    {"nombre": "Carlos Gutiérrez", "url": "https://www.carlosgutierrez.com.uy", "tipo": "carlos_gutierrez"},
     {"nombre": "Divino", "url": "https://www.divino.com.uy", "tipo": "html",
      "paginas": ["/catalogo"], "param_pagina": "js=1&pag", "max_paginas": 100},
     {"nombre": "Devoto", "url": "https://www.devoto.com.uy", "busquedas": "electro_hogar"},
