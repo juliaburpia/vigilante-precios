@@ -23,6 +23,8 @@ jobs:
     timeout-minutes: 9
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
 
       - uses: actions/setup-python@v5
         with:
@@ -42,5 +44,9 @@ jobs:
         run: |
           git config user.name "vigilante-precios"
           git config user.email "vigilante-precios@users.noreply.github.com"
+          cp precios.json /tmp/precios.json
+          git fetch origin main
+          git reset --hard origin/main
+          cp /tmp/precios.json precios.json
           git add precios.json
-          git diff --cached --quiet || (git commit -m "Actualizar precios" && git pull --rebase && git push)
+          git diff --cached --quiet || (git commit -m "Actualizar precios" && git push)
