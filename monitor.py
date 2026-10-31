@@ -163,7 +163,7 @@ def productos_fenicio(texto):
         except ValueError:
             continue
         var = obj.get("variante") or {}
-        if var.get("tieneStock") is False or obj.get("precioMonto") is None:
+        if obj.get("precioMonto") is None:  # tieneStock no es confiable en los listados
             continue
         out.append(dict(
             id="f" + str(var.get("codigoCompleto") or (obj.get("sku") or {}).get("com")),
@@ -453,7 +453,7 @@ def main():
     if REPORTE:
         telegram("📋 <b>Reporte del vigilante</b>\n" + "\n".join(esc(x) for x in resumen))
 
-    datos["debug"] = DEBUG
+    datos.pop("debug", None)
     with open(ARCHIVO_PRECIOS, "w", encoding="utf-8") as f:
         json.dump(datos, f, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
 
