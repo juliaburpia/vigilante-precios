@@ -117,6 +117,8 @@ def leer_vtex(t):
         busquedas = CONFIG.get("listas_de_busqueda", {}).get(busquedas, [])
     consultas = ([f"&ft={requests.utils.quote(b)}" for b in busquedas]
                  + [f"&fq=C:/{c}/" for c in t.get("categorias", [])]) or [""]
+    if t.get("sc"):  # canal de venta (TaTa vende online por el canal 4)
+        consultas = [c + f"&sc={t['sc']}" for c in consultas]
     for q in consultas:
         out += leer_vtex_consulta(t, base, q, vistos)
     return out

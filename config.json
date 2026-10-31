@@ -5,7 +5,7 @@
   "referencia_minima_pesos": 250,
   "maximo_avisos_por_vuelta": 15,
   "tiempo_maximo_segundos": 330,
-  "tiendas_a_la_vez": 6,
+  "tiendas_a_la_vez": 17,
   "avisar_primera_vez_por_minimos": true,
 
   "minimos_por_palabra": {
@@ -86,7 +86,7 @@
     {"nombre": "Devoto", "url": "https://www.devoto.com.uy", "busquedas": "electro_hogar"},
     {"nombre": "Géant", "url": "https://www.geant.com.uy", "busquedas": "electro_hogar"},
     {"nombre": "TaTa (Multiahorro)", "url": "https://www.tata.com.uy", "api": "https://tatauy.myvtex.com",
-     "tipo": "vtex", "max_paginas": 20,
+     "tipo": "vtex", "sc": 4, "max_paginas": 20,
      "categorias": [300, 91154156, 110, 211738756, 211738757, 211738758, 211738761, 211738762,
                     211738763, 211738764, 211741262]},
     {"nombre": "Loi", "url": "https://loi.com.uy", "tipo": "loi", "max_paginas": 20,
