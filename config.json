@@ -3,6 +3,7 @@
   "caida_minima": 0.8,
   "fraccion_vs_parecidos": 0.12,
   "parecidos_minimos": 3,
+  "valor_minimo_parecidos": 2500,
   "factor_minimos": 0.5,
   "referencia_minima_pesos": 250,
   "maximo_avisos_por_vuelta": 15,

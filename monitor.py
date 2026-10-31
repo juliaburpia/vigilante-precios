@@ -445,7 +445,7 @@ def revisar_tienda(t, prods, hist, ahora):
         otros = [(pz, n) for i, pz, n in grupos.get(familia(p["nombre"], p.get("marca")) or "", []) if i != p["id"]]
         if len(otros) >= CONFIG.get("parecidos_minimos", 1):
             normal = statistics.median(pz for pz, _ in otros)
-            if normal >= CONFIG["referencia_minima_pesos"] and pesos < normal * CONFIG.get("fraccion_vs_parecidos", 0.25):
+            if normal >= CONFIG.get("valor_minimo_parecidos", 0) and pesos < normal * CONFIG.get("fraccion_vs_parecidos", 0.25):
                 if not h.get("f"):
                     normal_txt = f"$ {normal:,.0f}".replace(",", ".")
                     ejemplo = min(otros, key=lambda x: abs(x[0] - normal))[1]
@@ -456,7 +456,14 @@ def revisar_tienda(t, prods, hist, ahora):
                 h["f"] = False
 
         h["v"] = ahora
+        # No repetir: si ya se avisó este producto a este precio (o menos), no se vuelve a avisar.
+        # Se "olvida" el aviso recién cuando el precio vuelve a subir bastante.
+        if h.get("av") and pesos > h["av"] * 1.5:
+            h.pop("av")
+        if motivo and h.get("av") and pesos >= h["av"] * 0.95:
+            motivo = None
         if motivo:
+            h["av"] = round(pesos, 2)
             alertas.append(
                 f"🚨 <b>{esc(t['nombre'])}</b>\n{esc(p['nombre'])}\n"
                 f"Precio: <b>{mostrar_precio(p['precio'], p.get('moneda'), t)}</b>\n"
