@@ -72,7 +72,7 @@
 
   "tiendas": [
     {"nombre": "ZonaTecno", "url": "https://www.zonatecno.com.uy", "tipo": "html",
-     "paginas": ["/catalogo?grp=1", "/catalogo"], "max_paginas": 120},
+     "paginas": ["/catalogo"], "param_pagina": "js=1&pag", "max_paginas": 150},
     {"nombre": "Banifox", "url": "https://www.banifox.com"},
     {"nombre": "Thot Computación", "url": "https://www.thotcomputacion.com.uy"},
     {"nombre": "PCMaster", "url": "https://www.pcmaster.com.uy"},
@@ -80,7 +80,8 @@
      "paginas": ["/ofertas", "/"], "max_paginas": 20},
 
     {"nombre": "Tienda Inglesa", "url": "https://www.tiendainglesa.com.uy", "busquedas": "electro_hogar"},
-    {"nombre": "Divino", "url": "https://www.divino.com.uy"},
+    {"nombre": "Divino", "url": "https://www.divino.com.uy", "tipo": "html",
+     "paginas": ["/catalogo"], "param_pagina": "js=1&pag", "max_paginas": 100},
     {"nombre": "Emporio del Hogar", "url": "https://www.emporiodelhogar.com.uy"},
     {"nombre": "Devoto", "url": "https://www.devoto.com.uy", "busquedas": "electro_hogar"},
     {"nombre": "Géant", "url": "https://www.geant.com.uy", "busquedas": "electro_hogar"},
@@ -91,7 +92,7 @@
     {"nombre": "El Insuperable", "url": "https://www.elinsuperable.com.uy"},
     {"nombre": "Ferretería del Sur", "url": "https://ferreteriadelsur.com.uy"},
     {"nombre": "Herramientas Total", "url": "https://herramientastotal.com", "tipo": "html",
-     "paginas": ["/catalogo"]},
+     "paginas": ["/catalogo"], "param_pagina": "js=1&pag", "max_paginas": 60},
     {"nombre": "Ferrefix", "url": "https://ferrefixuru.com"}
   ]
 }
