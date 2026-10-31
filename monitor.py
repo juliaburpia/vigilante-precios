@@ -419,7 +419,7 @@ def revisar_tienda(t, prods, hist, ahora):
             h = hist[clave] = {"p": [round(pesos, 2)], "a": False}
 
         palabra, minimo = minimo_por_palabra(p["nombre"])
-        if minimo and pesos < minimo:
+        if minimo and pesos < minimo * CONFIG.get("factor_minimos", 1):
             if not h.get("k"):
                 motivo = motivo or f"Muy barato para un/a {palabra} (menos de $ {minimo:,}".replace(",", ".") + ")"
                 h["k"] = True
@@ -428,7 +428,7 @@ def revisar_tienda(t, prods, hist, ahora):
 
         # Comparación con productos parecidos de la misma tienda (sirve aunque sea la primera vez que lo ve)
         otros = [pz for i, pz in grupos.get(familia(p["nombre"]) or "", []) if i != p["id"]]
-        if otros:
+        if len(otros) >= CONFIG.get("parecidos_minimos", 1):
             normal = statistics.median(otros)
             if normal >= CONFIG["referencia_minima_pesos"] and pesos < normal * CONFIG.get("fraccion_vs_parecidos", 0.25):
                 if not h.get("f"):
