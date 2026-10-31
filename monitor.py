@@ -111,11 +111,12 @@ def leer_woocommerce(t):
 
 def leer_vtex(t):
     """Si la tienda tiene 'busquedas' (ej. supermercados), solo revisa esos productos."""
-    base, out, vistos = t["url"], [], set()
+    base, out, vistos = t.get("api", t["url"]), [], set()
     busquedas = t.get("busquedas", [])
     if isinstance(busquedas, str):  # nombre de una lista definida en config.json
         busquedas = CONFIG.get("listas_de_busqueda", {}).get(busquedas, [])
-    consultas = [f"&ft={requests.utils.quote(b)}" for b in busquedas] or [""]
+    consultas = ([f"&ft={requests.utils.quote(b)}" for b in busquedas]
+                 + [f"&fq=C:/{c}/" for c in t.get("categorias", [])]) or [""]
     for q in consultas:
         out += leer_vtex_consulta(t, base, q, vistos)
     return out
@@ -146,7 +147,8 @@ def leer_vtex_consulta(t, base, q, vistos):
                 continue
             out.append(dict(id=f"v{p.get('productId')}", nombre=p.get("productName", ""),
                             precio=float(oferta.get("Price") or 0), moneda=None,
-                            url=p.get("link")))
+                            url=(f"{t['url']}/{p.get('linkText')}-{p['items'][0].get('itemId')}/p"
+                                 if t.get("api") else p.get("link"))))
     return out
 
 
