@@ -248,8 +248,78 @@ def leer_html(t):
     return out
 
 
+def leer_loi(t):
+    """Loi usa una API propia que pide un permiso temporal (token) que entrega gratis."""
+    api, out, vistos = "https://api.loi.com.uy", [], set()
+    r = S.post(f"{api}/request-token", timeout=20)
+    tok = r.json()["data"]["token"]
+    cab = {"Authorization": f"Bearer {tok}", "Origin": "https://loi.com.uy", "Referer": "https://loi.com.uy/"}
+    for cat in t.get("categorias", []):
+        for pag in range(1, t.get("max_paginas", 20) + 1):
+            if not queda_tiempo():
+                return out
+            r = S.get(f"{api}/category/{cat}/products", headers=cab, timeout=20,
+                      params={"perPage": 100, "page": pag, "with_information": 1, "variantMode": "principal"})
+            if not r.ok:
+                ESTADOS["loi.com.uy"] = f"error {r.status_code}"
+                break
+            d = r.json().get("data") or {}
+            for p in d.get("products") or []:
+                if p.get("producto_no_disponible") or not p.get("precio_numerico") or p.get("id") in vistos:
+                    continue
+                vistos.add(p.get("id"))
+                out.append(dict(id=f"l{p.get('id')}", nombre=p.get("titulo", ""),
+                                precio=float(p["precio_numerico"]),
+                                moneda="USD" if "U" in str(p.get("moneda", "")).upper() else "UYU",
+                                url=f"https://loi.com.uy/{p.get('urlseo') or p.get('slug')}"))
+            if pag >= (d.get("pagination") or {}).get("lastPage", 1):
+                break
+    return out
+
+
+def slug(texto):
+    import unicodedata
+    t = unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]+", "-", t).strip("-")
+
+
+def leer_sodimac(t):
+    """Sodimac trae los productos dentro de la página (__NEXT_DATA__). Recorre las categorías del inicio."""
+    base, out, vistos = t["url"], [], set()
+    cats = t.get("categorias")
+    if not cats:
+        inicio = pedir(f"{base}/sodimac-uy/")
+        cats = sorted(set(re.findall(r"/sodimac-uy/category/cat\d+/[a-z0-9\-]+/", inicio.text))) if inicio else []
+    for cat in cats:
+        for pag in range(1, t.get("max_paginas", 4) + 1):
+            if not queda_tiempo():
+                return out
+            r = pedir(f"{base}{cat}?currentpage={pag}")
+            if not r:
+                break
+            m = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', r.text, re.S)
+            if not m:
+                break
+            sd = ((json.loads(m.group(1)).get("props") or {}).get("pageProps") or {}).get("searchProps", {}).get("searchData") or {}
+            for p in sd.get("results") or []:
+                precios = [x for x in p.get("prices") or [] if x.get("priceWithoutFormatting")]
+                if not precios or p.get("productId") in vistos:
+                    continue
+                vistos.add(p.get("productId"))
+                mejor = min(precios, key=lambda x: x["priceWithoutFormatting"])
+                out.append(dict(id=f"so{p.get('productId')}", nombre=p.get("displayName", ""),
+                                precio=float(mejor["priceWithoutFormatting"]),
+                                moneda="USD" if str(mejor.get("symbol", "")).upper().startswith("U") else "UYU",
+                                url=f"{base}/sodimac-uy/product/{p.get('productId')}/{slug(p.get('displayName', 'x'))}/{p.get('skuId') or p.get('productId')}/"))
+            pg = sd.get("pagination") or {}
+            if pag * (pg.get("perPage") or 40) >= (pg.get("count") or 0):
+                break
+            time.sleep(0.3)
+    return out
+
+
 LECTORES = {"shopify": leer_shopify, "woocommerce": leer_woocommerce,
-            "vtex": leer_vtex, "html": leer_html}
+            "vtex": leer_vtex, "html": leer_html, "loi": leer_loi, "sodimac": leer_sodimac}
 
 
 def detectar_tipo(t):
