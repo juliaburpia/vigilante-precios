@@ -4,7 +4,7 @@
   "fraccion_vs_parecidos": 0.25,
   "referencia_minima_pesos": 250,
   "maximo_avisos_por_vuelta": 15,
-  "tiempo_maximo_segundos": 420,
+  "tiempo_maximo_segundos": 330,
   "tiendas_a_la_vez": 6,
   "avisar_primera_vez_por_minimos": true,
 
