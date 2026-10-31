@@ -76,7 +76,10 @@
   "tiendas": [
     {"nombre": "ZonaTecno", "url": "https://www.zonatecno.com.uy", "tipo": "html",
      "paginas": ["/catalogo"], "param_pagina": "js=1&pag", "max_paginas": 150},
-    {"nombre": "Banifox", "url": "https://www.banifox.com"},
+    {"nombre": "Banifox", "url": "https://www.banifox.com", "tipo": "html", "param_pagina": "pagenumber",
+     "max_paginas": 100,
+     "paginas": ["/computadoras", "/componentes", "/monitores-5", "/electronica-2", "/perifericos-4",
+                 "/gamingstreaming", "/smartwatch-tablets", "/hogarentretenimiento", "/oportunidades-open-box"]},
     {"nombre": "Thot Computación", "url": "https://www.thotcomputacion.com.uy"},
     {"nombre": "PCMaster", "url": "https://www.pcmaster.com.uy"},
     {"nombre": "Tiendamia", "url": "https://tiendamia.com/uy", "tipo": "html",

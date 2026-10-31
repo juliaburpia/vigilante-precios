@@ -220,6 +220,40 @@ def productos_jsonld(texto, url_pagina):
     return out
 
 
+def a_numero(txt):
+    """'1.145' -> 1145 ; '1.234,50' -> 1234.5 ; '548' -> 548"""
+    m = re.search(r"\d[\d.,]*", txt or "")
+    if not m:
+        return None
+    n = m.group(0).rstrip(".,")
+    if "," in n:
+        n = n.replace(".", "").replace(",", ".")
+    elif re.fullmatch(r"\d{1,3}(\.\d{3})+", n):
+        n = n.replace(".", "")
+    try:
+        return float(n)
+    except ValueError:
+        return None
+
+
+def productos_nopcommerce(texto, base):
+    """Tiendas hechas con nopCommerce (Banifox): bloques 'product-item' con título y 'actual-price'."""
+    out = []
+    for blk in texto.split('class="product-item')[1:]:
+        pid = re.search(r'data-productid="(\d+)"', blk)
+        tit = re.search(r'class="product-title"><a href="([^"]+)">(.*?)</a>', blk, re.S)
+        pre = re.search(r'class="price actual-price">(.*?)</span>', blk, re.S)
+        if not (pid and tit and pre):
+            continue
+        precio = a_numero(pre.group(1))
+        if not precio:
+            continue
+        out.append(dict(id="n" + pid.group(1), nombre=html.unescape(tit.group(2)).strip(),
+                        precio=precio, moneda="USD" if re.search(r"U\$S|USD|US\$", pre.group(1)) else "UYU",
+                        url=urljoin(base + "/", tit.group(1))))
+    return out
+
+
 def leer_html(t):
     """Recorre las páginas de listado indicadas, sumando ?pag=2, 3... hasta que no aparezcan productos nuevos."""
     base, vistos, out = t["url"], set(), []
@@ -234,7 +268,7 @@ def leer_html(t):
             r = pedir(url)
             if not r:
                 break
-            prods = productos_fenicio(r.text) or productos_jsonld(r.text, url)
+            prods = productos_fenicio(r.text) or productos_nopcommerce(r.text, base) or productos_jsonld(r.text, url)
             if not prods:
                 i = r.text.find("precioMonto")
                 DEBUG[urlparse(url).netloc] = r.text[max(0, i - 1500):i + 500] if i >= 0 else r.text[:3000]
