@@ -86,6 +86,9 @@
 
     {"nombre": "Tienda Inglesa", "url": "https://www.tiendainglesa.com.uy", "busquedas": "electro_hogar"},
     {"nombre": "Carlos Gutiérrez", "url": "https://www.carlosgutierrez.com.uy", "tipo": "carlos_gutierrez"},
+    {"nombre": "DIMM", "url": "https://www.dimm.com.uy", "tipo": "html", "param_pagina": "js=1&pag",
+     "max_paginas": 60, "paginas": ["/electrodomesticos", "/imagen-sonido", "/celulares", "/informatica",
+                                    "/consolas", "/herramientas", "/hogar"]},
     {"nombre": "Divino", "url": "https://www.divino.com.uy", "tipo": "html",
      "paginas": ["/catalogo"], "param_pagina": "js=1&pag", "max_paginas": 100},
     {"nombre": "Devoto", "url": "https://www.devoto.com.uy", "busquedas": "electro_hogar"},
