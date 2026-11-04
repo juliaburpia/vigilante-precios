@@ -638,6 +638,91 @@ def categoria(nombre, t):
     return t.get("rubro", "hogar")
 
 
+# ------------------------------------------------- comparar entre tiendas --
+
+MEDIDA = re.compile(r"\d+(gb|tb|mb|w|mm|cm|mts|m|l|lt|lts|kg|gr|g|v|hz|mah|btu|cc|ml|pulgadas|hp|rpm|bar|psi)")
+
+
+def codigos_modelo(nombre):
+    """Códigos de modelo del nombre: 'MMB6382M', 'TAT11601', 'MDRS619FGR28'.
+    Tienen letras y al menos 2 números; no cuentan medidas como '1200W' o '128GB'."""
+    out = set()
+    for w in re.findall(r"[a-z0-9][a-z0-9\-/\.]{3,}[a-z0-9]", nombre.lower()):
+        w = re.sub(r"[\-/\.]", "", w)
+        if (len(w) >= 5 and re.search(r"[a-z]", w) and len(re.findall(r"\d", w)) >= 2
+                and not MEDIDA.fullmatch(w)):
+            out.add(w)
+    return out
+
+
+def mismo_producto(a, b):
+    """Para no mezclar el aparato con un accesorio que tiene el mismo código ("Vaso para licuadora X")."""
+    na, nb = f" {a.lower()} ", f" {b.lower()} "
+    accesorio = lambda n: " para " in n or any(f" {x}" in n for x in CONFIG["palabras_excluidas"])
+    return accesorio(na) == accesorio(nb)
+
+
+def pesos_txt(x):
+    return f"$ {x:,.0f}".replace(",", ".")
+
+
+def comparar_entre_tiendas(resultados, hist, ahora):
+    """Busca el mismo modelo (mismo código) en otras tiendas y avisa si en una está muchísimo más barato."""
+    indice = {}
+    for t, _, prods, _ in resultados:
+        for p in prods:
+            if not p.get("precio") or p["precio"] <= 0 or not p.get("url"):
+                continue
+            pesos = a_pesos(p["precio"], p.get("moneda"), t)
+            for c in codigos_modelo(p.get("nombre", "")):
+                indice.setdefault(c, []).append((t, p, pesos))
+
+    alertas, revisados = [], set()
+    hace_7_dias = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d")
+    for items in indice.values():
+        if len({t["nombre"] for t, _, _ in items}) < 2:
+            continue
+        for t, p, pesos in items:
+            clave = f"{t['nombre']}|{p['id']}"
+            h = hist.get(clave)
+            if clave in revisados or not h:
+                continue
+            # el precio más bajo del mismo producto en cada una de las otras tiendas
+            por_tienda = {}
+            for t2, p2, pz in items:
+                if t2["nombre"] != t["nombre"] and mismo_producto(p["nombre"], p2["nombre"]):
+                    if pz < por_tienda.get(t2["nombre"], (float("inf"),))[0]:
+                        por_tienda[t2["nombre"]] = (pz, p2["nombre"])
+            if not por_tienda:
+                continue
+            normal = statistics.median(pz for pz, _ in por_tienda.values())
+            fraccion = CONFIG.get("fraccion_otras_tiendas", 0.4) if len(por_tienda) >= 2 else 0.3
+            if normal < CONFIG.get("valor_minimo_otras_tiendas", 2000) or pesos >= normal * fraccion:
+                h.pop("xpend", None)
+                continue
+            revisados.add(clave)
+            en_usd = (p.get("moneda") or t.get("moneda") or "UYU").upper().strip() in EN_DOLARES
+            error_carga, _ = tipo_de_error([normal], pesos, p["precio"], en_usd, exacto=False)
+            if not error_carga:  # confirmar en dos revisiones seguidas
+                pend = h.get("xpend")
+                if not pend or abs(pesos - pend) > pend * 0.05:
+                    h["xpend"] = round(pesos, 2)
+                    continue
+            # no repetir (comparte el registro con los otros avisos)
+            if h.get("av") and h.get("avd", ahora) >= hace_7_dias and pesos >= h["av"] * 0.95:
+                continue
+            h["av"], h["avd"] = round(pesos, 2), ahora
+            tienda_ej, (precio_ej, nombre_ej) = min(por_tienda.items(), key=lambda x: abs(x[1][0] - normal))
+            otras = f"En {len(por_tienda)} otra(s) tienda(s) el mismo modelo sale unos {pesos_txt(normal)}"
+            motivo = (texto_error(error_carga, normal, en_usd) + " " if error_carga else "") + otras + \
+                f" (ej: {tienda_ej} a {pesos_txt(precio_ej)}: {nombre_ej[:60]})"
+            alertas.append((categoria(p["nombre"], t),
+                f"{'💱' if error_carga else '🔎'} <b>{esc(t['nombre'])}</b>\n{esc(p['nombre'])}\n"
+                f"Precio: <b>{mostrar_precio(p['precio'], p.get('moneda'), t)}</b>\n"
+                f"{esc(motivo)}\n{esc(p['url'])}"))
+    return alertas
+
+
 # -------------------------------------------------------------- telegram --
 
 def telegram(texto, cat=None):
@@ -707,6 +792,12 @@ def main():
         except Exception as e:  # una tienda que falla no frena a las demás
             resumen.append(f"❌ {t['nombre']}: error {type(e).__name__}")
         print(resumen[-1])
+
+    # el mismo modelo en otras tiendas
+    try:
+        todas.extend(comparar_entre_tiendas([r for r in resultados if not r[3]], hist, ahora))
+    except Exception as e:
+        print("Error comparando entre tiendas:", e)
 
     # limpiar productos que no se ven hace más de 30 días
     limite = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")
