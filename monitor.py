@@ -419,7 +419,72 @@ def leer_odoo(t):
     return out
 
 
-LECTORES = {"shopify": leer_shopify, "odoo": leer_odoo, "woocommerce": leer_woocommerce,
+def leer_html_rapido(t):
+    """Como leer_html pero pide varias páginas a la vez (tiendas Fenicio con muchos productos, ej. San Roque).
+    Pasada la última página, Fenicio repite la primera: se corta cuando no aparecen productos nuevos."""
+    base, vistos, out = t["url"], set(), []
+    lote, pag = t.get("paginas_a_la_vez", 8), 1
+    inicio = urljoin(base + "/", t.get("paginas", ["/catalogo"])[0].lstrip("/"))
+    param = t.get("param_pagina", "js=1&pag")
+    while pag <= t.get("max_paginas", 1000) and queda_tiempo():
+        urls = [inicio if n == 1 else f"{inicio}{'&' if '?' in inicio else '?'}{param}={n}"
+                for n in range(pag, pag + lote)]
+        with ThreadPoolExecutor(max_workers=lote) as ex:
+            respuestas = list(ex.map(pedir, urls))
+        nuevos = 0
+        for r in respuestas:
+            if not r:
+                continue
+            for p in productos_fenicio(r.text) or productos_jsonld(r.text, r.url):
+                if p["id"] not in vistos:
+                    vistos.add(p["id"])
+                    out.append(p)
+                    nuevos += 1
+        if not nuevos:
+            break
+        pag += lote
+    return out
+
+
+def leer_magento(t):
+    """Tiendas Magento 2 (Farmashop): API GraphQL, 300 productos por pedido, varios pedidos a la vez."""
+    base, out, vistos = t["url"], [], set()
+    consulta = ('{products(filter:{category_uid:{eq:"%s"}},pageSize:%d,currentPage:%d){page_info{total_pages} '
+                'items{sku name url_key url_suffix stock_status price_range{minimum_price{final_price{value currency}}}}}}')
+    tam, raiz = t.get("por_pagina", 300), t.get("categoria_raiz", "Mg==")
+
+    def pagina(n):
+        try:
+            r = S.post(f"{base}/graphql", json={"query": consulta % (raiz, tam, n)}, timeout=90)
+            return r.json()["data"]["products"]
+        except Exception as e:
+            ESTADOS[urlparse(base).netloc] = type(e).__name__
+            return None
+
+    primera = pagina(1)
+    if not primera:
+        return out
+    total = min(primera["page_info"]["total_pages"], t.get("max_paginas", 100))
+    with ThreadPoolExecutor(max_workers=t.get("paginas_a_la_vez", 10)) as ex:
+        resto = list(ex.map(pagina, range(2, total + 1)))
+    for datos in [primera] + resto:
+        for p in (datos or {}).get("items") or []:
+            if p.get("stock_status") == "OUT_OF_STOCK" or p.get("sku") in vistos:
+                continue
+            try:
+                precio = p["price_range"]["minimum_price"]["final_price"]
+            except (KeyError, TypeError):
+                continue
+            if not precio or not precio.get("value"):
+                continue
+            vistos.add(p.get("sku"))
+            out.append(dict(id=f"m{p['sku']}", nombre=p.get("name", ""), precio=float(precio["value"]),
+                            moneda=precio.get("currency"),
+                            url=f"{base}/{p.get('url_key')}{p.get('url_suffix') or '.html'}"))
+    return out
+
+
+LECTORES = {"shopify": leer_shopify, "odoo": leer_odoo, "magento": leer_magento, "html_rapido": leer_html_rapido, "woocommerce": leer_woocommerce,
             "vtex": leer_vtex, "html": leer_html, "loi": leer_loi, "sodimac": leer_sodimac,
             "carlos_gutierrez": leer_carlos_gutierrez}
 
@@ -631,6 +696,8 @@ def revisar_tienda(t, prods, hist, ahora):
 
 def categoria(nombre, t):
     """hogar, ferreteria o tecnologia: primero por palabras del nombre, si no por el rubro de la tienda."""
+    if t.get("rubro") == "farmacia":  # todo lo de las farmacias va al grupo Farmacia
+        return "farmacia"
     n = f" {nombre.lower()} "
     for cat in ("tecnologia", "ferreteria", "hogar"):
         if any(f" {w}" in n for w in CONFIG.get("palabras_por_categoria", {}).get(cat, [])):
@@ -831,7 +898,7 @@ def main():
     # Primero los posibles errores de moneda o de dígito
     todas.sort(key=lambda a: not a[1].startswith("💱"))
     tope = CONFIG.get("maximo_avisos_por_vuelta", 15)
-    for cat in ("hogar", "ferreteria", "tecnologia"):
+    for cat in ("hogar", "ferreteria", "tecnologia", "farmacia"):
         de_cat = [texto for c, texto in todas if c == cat]
         for texto in de_cat[:tope]:
             telegram(texto, cat)
@@ -839,7 +906,8 @@ def main():
             telegram(f"…y {len(de_cat) - tope} avisos más en esta vuelta.", cat)
     if REPORTE:
         telegram("📋 <b>Reporte del vigilante</b>\n" + "\n".join(esc(x) for x in resumen))
-        for cat, nombre in (("hogar", "Hogar"), ("ferreteria", "Ferretería"), ("tecnologia", "Tecnología")):
+        for cat, nombre in (("hogar", "Hogar"), ("ferreteria", "Ferretería"), ("tecnologia", "Tecnología"),
+                            ("farmacia", "Farmacia")):
             if (CONFIG.get("grupos_telegram") or {}).get(cat):
                 telegram(f"✅ Grupo {nombre} conectado al vigilante. Acá te van a llegar los avisos de {nombre.lower()}.", cat)
 
