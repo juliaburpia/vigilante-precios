@@ -868,6 +868,18 @@ def telegram(texto, cat=None):
 
 # ------------------------------------------------------------------ main --
 
+def solo_lo_que_interesa(t, prods):
+    """Si el rubro tiene filtro en config.json (ej. farmacia: solo perfumería, cremas y protector solar),
+    se queda solo con esos productos."""
+    filtro = (CONFIG.get("filtros_por_rubro") or {}).get(t.get("rubro"))
+    if not filtro:
+        return prods
+    palabra = lambda w: r"(?<![a-záéíóúñü])" + re.escape(w) + r"(?![a-záéíóúñü])"
+    incluir = re.compile("|".join(palabra(w) for w in filtro.get("incluir", [])))
+    excluir = re.compile("|".join(palabra(w) for w in filtro.get("excluir", [])) or r"(?!x)x")
+    return [p for p in prods if incluir.search(p["nombre"].lower()) and not excluir.search(p["nombre"].lower())]
+
+
 def main():
     try:
         datos = json.load(open(ARCHIVO_PRECIOS, encoding="utf-8"))
@@ -884,7 +896,7 @@ def main():
             prods = LECTORES[tipo](t)
             if not prods and tipo != "html" and not t.get("tipo"):
                 tipo, prods = "html", leer_html(t)
-            return t, tipo, prods, None
+            return t, tipo, solo_lo_que_interesa(t, prods), None
         except Exception as e:  # una tienda que falla no frena a las demás
             return t, None, [], e
 
