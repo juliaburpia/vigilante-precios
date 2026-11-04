@@ -665,7 +665,7 @@ def codigos_modelo(nombre):
 def mismo_producto(a, b):
     """Para no mezclar el aparato con un accesorio que tiene el mismo código ("Vaso para licuadora X")."""
     na, nb = f" {a.lower()} ", f" {b.lower()} "
-    accesorio = lambda n: " para " in n or any(f" {x}" in n for x in CONFIG["palabras_excluidas"])
+    accesorio = lambda n: " para " in n or " p/" in n or any(f" {x}" in n for x in CONFIG["palabras_excluidas"])
     if accesorio(na) != accesorio(nb):
         return False
     # Además del código tienen que compartir palabras (marca / tipo): "Licuadora Bosch" y "LICUADORA BOSCH"
@@ -713,13 +713,17 @@ def comparar_entre_tiendas(resultados, hist, ahora):
                 continue
             normal = statistics.median(pz for pz, _ in por_tienda.values())
             fraccion = CONFIG.get("fraccion_otras_tiendas", 0.4) if len(por_tienda) >= 2 else 0.3
-            if normal < CONFIG.get("valor_minimo_otras_tiendas", 2000) or pesos >= normal * fraccion:
+            # Con una sola tienda para comparar no se sabe cuál de las dos está mal: se avisa solo si
+            # además este producto bajó respecto a lo que venía costando en su propia tienda.
+            bajo_en_su_tienda = statistics.median(h["p"]) >= pesos * 2
+            if (normal < CONFIG.get("valor_minimo_otras_tiendas", 2000) or pesos >= normal * fraccion
+                    or (len(por_tienda) < 2 and not bajo_en_su_tienda)):
                 h.pop("xpend", None)
                 continue
             revisados.add(clave)
             ej = min(por_tienda.items(), key=lambda x: abs(x[1][0] - normal))
             print(f"[comparar] {t['nombre']} | {p['nombre'][:70]} | {pesos_txt(pesos)} vs {pesos_txt(normal)} | ej {ej[0]}: {ej[1][1][:70]}")
-            if CONFIG.get("comparar_entre_tiendas", "log") == "log":  # modo prueba: solo anota en el registro
+            if CONFIG.get("comparar_entre_tiendas", "si") == "log":  # modo prueba: solo anota en el registro
                 continue
             en_usd = (p.get("moneda") or t.get("moneda") or "UYU").upper().strip() in EN_DOLARES
             error_carga, _ = tipo_de_error([normal], pesos, p["precio"], en_usd, exacto=False)
