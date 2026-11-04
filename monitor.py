@@ -618,23 +618,34 @@ def revisar_tienda(t, prods, hist, ahora):
         if motivo:
             h["av"] = round(pesos, 2)
             h["avd"] = ahora
-            alertas.append(
+            alertas.append((categoria(p["nombre"], t),
                 f"{'💱' if error_carga else '🚨'} <b>{esc(t['nombre'])}</b>\n{esc(p['nombre'])}\n"
                 f"Precio: <b>{mostrar_precio(p['precio'], p.get('moneda'), t)}</b>\n"
-                f"{esc(motivo)}\n{esc(p['url'])}")
+                f"{esc(motivo)}\n{esc(p['url'])}"))
     return alertas, caidas
+
+
+def categoria(nombre, t):
+    """hogar, ferreteria o tecnologia: primero por palabras del nombre, si no por el rubro de la tienda."""
+    n = f" {nombre.lower()} "
+    for cat in ("tecnologia", "ferreteria", "hogar"):
+        if any(f" {w}" in n for w in CONFIG.get("palabras_por_categoria", {}).get(cat, [])):
+            return cat
+    return t.get("rubro", "hogar")
 
 
 # -------------------------------------------------------------- telegram --
 
-def telegram(texto):
-    if not TOKEN or not CHAT_ID:
-        print("[sin Telegram configurado]\n" + texto + "\n")
+def telegram(texto, cat=None):
+    """Manda al grupo de la categoría (config.json -> grupos_telegram); si no hay grupo, al chat del bot."""
+    destino = str((CONFIG.get("grupos_telegram") or {}).get(cat) or CHAT_ID)
+    if not TOKEN or not destino:
+        print(f"[sin Telegram configurado] ({cat})\n" + texto + "\n")
         return
     for i in range(0, len(texto), 3900):
         try:
             S.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-                   data={"chat_id": CHAT_ID, "text": texto[i:i + 3900],
+                   data={"chat_id": destino, "text": texto[i:i + 3900],
                          "parse_mode": "HTML", "disable_web_page_preview": "false"},
                    timeout=20)
         except requests.RequestException as e:
@@ -682,8 +693,9 @@ def main():
             alertas, caidas = revisar_tienda(t, prods, hist, ahora)
             if prods and caidas > max(20, len(prods) * 0.3):
                 # Demasiadas caídas juntas: casi seguro cambió de moneda o la página, no son errores reales
-                todas.append(f"⚠️ <b>{esc(t['nombre'])}</b>: {caidas} productos bajaron de golpe a la vez. "
-                             f"Puede ser un cambio general de la página (o una liquidación). Revisalo: {esc(t['url'])}")
+                todas.append((t.get("rubro", "hogar"),
+                              f"⚠️ <b>{esc(t['nombre'])}</b>: {caidas} productos bajaron de golpe a la vez. "
+                              f"Puede ser un cambio general de la página (o una liquidación). Revisalo: {esc(t['url'])}"))
             elif not primera_vez or CONFIG.get("avisar_primera_vez_por_minimos", True):
                 todas.extend(alertas)
             resumen.append(f"{'✅' if prods else '❌'} {t['nombre']} ({tipo}): {len(prods)} productos"
@@ -698,12 +710,14 @@ def main():
         del hist[k]
 
     # Primero los posibles errores de moneda o de dígito
-    todas.sort(key=lambda a: not a.startswith("💱"))
+    todas.sort(key=lambda a: not a[1].startswith("💱"))
     tope = CONFIG.get("maximo_avisos_por_vuelta", 15)
-    for a in todas[:tope]:
-        telegram(a)
-    if len(todas) > tope:
-        telegram(f"…y {len(todas) - tope} avisos más en esta vuelta.")
+    for cat in ("hogar", "ferreteria", "tecnologia"):
+        de_cat = [texto for c, texto in todas if c == cat]
+        for texto in de_cat[:tope]:
+            telegram(texto, cat)
+        if len(de_cat) > tope:
+            telegram(f"…y {len(de_cat) - tope} avisos más en esta vuelta.", cat)
     if REPORTE:
         telegram("📋 <b>Reporte del vigilante</b>\n" + "\n".join(esc(x) for x in resumen))
 
