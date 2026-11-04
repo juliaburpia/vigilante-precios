@@ -69,7 +69,8 @@
     "hogar": "-5434073829",
     "ferreteria": "-5359222688",
     "tecnologia": "-5455947180",
-    "farmacia": "-5587773198"
+    "farmacia": "-5587773198",
+    "bazar": "-5489785638"
   },
 
   "palabras_por_categoria": {
@@ -150,9 +151,12 @@
     {"nombre": "AMV Store", "rubro": "tecnologia", "url": "https://amvstore.com.uy", "tipo": "html",
      "paginas": ["/catalogo"], "param_pagina": "js=1&pag", "max_paginas": 260},
 
-    {"nombre": "Farmashop", "rubro": "farmacia", "url": "https://tienda.farmashop.com.uy", "tipo": "magento",
+    {"nombre": "Farmashop", "rubro": "farmacia", "sin_minimos": true, "url": "https://tienda.farmashop.com.uy", "tipo": "magento",
      "max_paginas": 80, "paginas_a_la_vez": 10},
-    {"nombre": "San Roque", "rubro": "farmacia", "url": "https://www.sanroque.com.uy", "tipo": "html_rapido",
-     "paginas": ["/catalogo"], "param_pagina": "js=1&pag", "max_paginas": 1000, "paginas_a_la_vez": 8}
+    {"nombre": "San Roque", "rubro": "farmacia", "sin_minimos": true, "url": "https://www.sanroque.com.uy", "tipo": "html_rapido",
+     "paginas": ["/catalogo"], "param_pagina": "js=1&pag", "max_paginas": 1000, "paginas_a_la_vez": 8},
+
+    {"nombre": "Bazar Online Uy", "rubro": "bazar", "url": "https://bazaronlineuy.com", "tipo": "shopify"},
+    {"nombre": "Grupo Dos", "rubro": "bazar", "url": "https://grupodos.com.uy", "tipo": "grupodos", "max_paginas": 300}
   ]
 }
