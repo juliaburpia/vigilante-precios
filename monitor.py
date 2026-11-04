@@ -729,7 +729,7 @@ def revisar_tienda(t, prods, hist, ahora):
 
 def categoria(nombre, t):
     """hogar, ferreteria o tecnologia: primero por palabras del nombre, si no por el rubro de la tienda."""
-    if t.get("rubro") in ("farmacia", "bazar"):  # todo lo de esas tiendas va a su grupo
+    if t.get("rubro") in ("farmacia", "bazar", "motos"):  # todo lo de esas tiendas va a su grupo
         return t["rubro"]
     n = f" {nombre.lower()} "
     for cat in ("tecnologia", "ferreteria", "hogar"):
@@ -932,7 +932,7 @@ def main():
     # Primero los posibles errores de moneda o de dígito
     todas.sort(key=lambda a: not a[1].startswith("💱"))
     tope = CONFIG.get("maximo_avisos_por_vuelta", 15)
-    for cat in ("hogar", "ferreteria", "tecnologia", "farmacia", "bazar"):
+    for cat in ("hogar", "ferreteria", "tecnologia", "farmacia", "bazar", "motos"):
         de_cat = [texto for c, texto in todas if c == cat]
         for texto in de_cat[:tope]:
             telegram(texto, cat)
@@ -941,7 +941,7 @@ def main():
     if REPORTE:
         telegram("📋 <b>Reporte del vigilante</b>\n" + "\n".join(esc(x) for x in resumen))
         for cat, nombre in (("hogar", "Hogar"), ("ferreteria", "Ferretería"), ("tecnologia", "Tecnología"),
-                            ("farmacia", "Farmacia"), ("bazar", "Bazar")):
+                            ("farmacia", "Farmacia"), ("bazar", "Bazar"), ("motos", "Motos")):
             if (CONFIG.get("grupos_telegram") or {}).get(cat):
                 telegram(f"✅ Grupo {nombre} conectado al vigilante. Acá te van a llegar los avisos de {nombre.lower()}.", cat)
 
