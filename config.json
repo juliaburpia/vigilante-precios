@@ -65,6 +65,38 @@
     ]
   },
 
+  "grupos_telegram": {
+    "hogar": "",
+    "ferreteria": "",
+    "tecnologia": ""
+  },
+
+  "palabras_por_categoria": {
+    "tecnologia": [
+      "notebook", "laptop", "macbook", "imac", "iphone", "ipad", "celular", "smartphone", "tablet",
+      "monitor", "smart tv", "televisor", "tv ", "led ", "auricular", "parlante", "airpods", "apple watch",
+      "smartwatch", "reloj inteligente", "consola", "playstation", "ps5", "xbox", "nintendo", "joystick",
+      "drone", "cámara", "camara", "impresora", "mouse", "teclado", "pendrive", "ssd", "disco duro",
+      "memoria", "router", "proyector", "computadora", "pc ", "gamer", "gaming", "procesador",
+      "placa de video", "kindle", "barra de sonido", "soundbar", "tarjeta de video", "webcam"
+    ],
+    "ferreteria": [
+      "taladro", "amoladora", "rotomartillo", "atornillador", "destornillador", "compresor", "generador",
+      "soldadora", "motosierra", "bordeadora", "cortadora de césped", "cortacésped", "hidrolavadora",
+      "sierra", "serrucho", "caladora", "lijadora", "ingletadora", "martillo", "llave", "pinza", "alicate",
+      "herramienta", "escalera", "pintura", "mecha", "broca", "nivel", "cinta métrica", "candado",
+      "cerradura", "tornillo", "carretilla", "pala", "rastrillo", "manguera", "pistola de calor",
+      "multímetro", "tester", "sopladora", "bomba de agua"
+    ],
+    "hogar": [
+      "heladera", "refrigerador", "freezer", "lavarropas", "secarropas", "lavavajillas", "microondas",
+      "horno", "cocina", "anafe", "aire acondicionado", "estufa", "calefactor", "ventilador", "licuadora",
+      "batidora", "cafetera", "tostadora", "freidora", "aspiradora", "plancha", "colchón", "colchon",
+      "sommier", "sillón", "sillon", "sofá", "sofa", "mesa", "silla", "cama", "ropero", "placard",
+      "olla", "sartén", "sarten", "vajilla", "termo", "jarra eléctrica", "pava eléctrica"
+    ]
+  },
+
   "palabras_excluidas": [
     "funda", "estuche", "case", "vidrio", "film", "lámina", "protector",
     "cable", "cargador", "adaptador", "soporte", "correa", "malla", "repuesto",
@@ -75,18 +107,18 @@
   ],
 
   "tiendas": [
-    {"nombre": "ZonaTecno", "url": "https://www.zonatecno.com.uy", "tipo": "html",
+    {"nombre": "ZonaTecno", "rubro": "tecnologia", "url": "https://www.zonatecno.com.uy", "tipo": "html",
      "paginas": ["/catalogo"], "param_pagina": "js=1&pag", "max_paginas": 150},
-    {"nombre": "Banifox", "url": "https://www.banifox.com", "tipo": "html", "param_pagina": "pagenumber",
+    {"nombre": "Banifox", "rubro": "tecnologia", "url": "https://www.banifox.com", "tipo": "html", "param_pagina": "pagenumber",
      "max_paginas": 100,
      "paginas": ["/computadoras", "/componentes", "/monitores-5", "/electronica-2", "/perifericos-4",
                  "/gamingstreaming", "/smartwatch-tablets", "/hogarentretenimiento", "/oportunidades-open-box"]},
-    {"nombre": "Thot Computación", "url": "https://www.thotcomputacion.com.uy"},
-    {"nombre": "Tiendamia", "url": "https://tiendamia.com/uy", "tipo": "html",
+    {"nombre": "Thot Computación", "rubro": "tecnologia", "url": "https://www.thotcomputacion.com.uy"},
+    {"nombre": "Tiendamia", "rubro": "tecnologia", "url": "https://tiendamia.com/uy", "tipo": "html",
      "paginas": ["/ofertas", "/"], "max_paginas": 20},
 
     {"nombre": "Tienda Inglesa", "url": "https://www.tiendainglesa.com.uy", "busquedas": "electro_hogar"},
-    {"nombre": "Carlos Gutiérrez", "url": "https://www.carlosgutierrez.com.uy", "tipo": "carlos_gutierrez"},
+    {"nombre": "Carlos Gutiérrez", "rubro": "ferreteria", "url": "https://www.carlosgutierrez.com.uy", "tipo": "carlos_gutierrez"},
     {"nombre": "DIMM", "url": "https://www.dimm.com.uy", "tipo": "html", "param_pagina": "js=1&pag",
      "max_paginas": 60, "paginas": ["/electrodomesticos", "/imagen-sonido", "/celulares", "/informatica",
                                     "/consolas", "/herramientas", "/hogar"]},
@@ -103,16 +135,16 @@
                     "notebooks-y-accesorios", "audio", "electronicos", "informatica", "hogar",
                     "articulos-de-ferreteria"]},
 
-    {"nombre": "Sodimac", "url": "https://www.sodimac.com.uy", "tipo": "sodimac", "max_paginas": 4},
-    {"nombre": "El Insuperable", "url": "https://www.elinsuperable.com.uy"},
-    {"nombre": "Ferretería del Sur", "url": "https://ferreteriadelsur.com.uy"},
-    {"nombre": "Herramientas Total", "url": "https://herramientastotal.com", "tipo": "html",
+    {"nombre": "Sodimac", "rubro": "ferreteria", "url": "https://www.sodimac.com.uy", "tipo": "sodimac", "max_paginas": 4},
+    {"nombre": "El Insuperable", "rubro": "ferreteria", "url": "https://www.elinsuperable.com.uy"},
+    {"nombre": "Ferretería del Sur", "rubro": "ferreteria", "url": "https://ferreteriadelsur.com.uy"},
+    {"nombre": "Herramientas Total", "rubro": "ferreteria", "url": "https://herramientastotal.com", "tipo": "html",
      "paginas": ["/catalogo"], "param_pagina": "js=1&pag", "max_paginas": 60},
-    {"nombre": "Ferrefix", "url": "https://ferrefixuru.com"},
+    {"nombre": "Ferrefix", "rubro": "ferreteria", "url": "https://ferrefixuru.com"},
 
     {"nombre": "Tiendas Montevideo", "url": "https://www.tiendasmontevideo.com.uy", "tipo": "woocommerce", "max_paginas": 60},
-    {"nombre": "Tienda Montevideo Portal", "url": "https://tienda.montevideo.com.uy", "tipo": "odoo", "max_paginas": 600},
-    {"nombre": "AMV Store", "url": "https://amvstore.com.uy", "tipo": "html",
+    {"nombre": "Tienda Montevideo Portal", "rubro": "tecnologia", "url": "https://tienda.montevideo.com.uy", "tipo": "odoo", "max_paginas": 600},
+    {"nombre": "AMV Store", "rubro": "tecnologia", "url": "https://amvstore.com.uy", "tipo": "html",
      "paginas": ["/catalogo"], "param_pagina": "js=1&pag", "max_paginas": 260}
   ]
 }
