@@ -720,6 +720,9 @@ def main():
             telegram(f"…y {len(de_cat) - tope} avisos más en esta vuelta.", cat)
     if REPORTE:
         telegram("📋 <b>Reporte del vigilante</b>\n" + "\n".join(esc(x) for x in resumen))
+        for cat, nombre in (("hogar", "Hogar"), ("ferreteria", "Ferretería"), ("tecnologia", "Tecnología")):
+            if (CONFIG.get("grupos_telegram") or {}).get(cat):
+                telegram(f"✅ Grupo {nombre} conectado al vigilante. Acá te van a llegar los avisos de {nombre.lower()}.", cat)
 
     datos.pop("debug", None)
     with open(ARCHIVO_PRECIOS, "w", encoding="utf-8") as f:
