@@ -469,6 +469,29 @@ def precios_por_familia(t, prods):
     return grupos
 
 
+def tipo_de_error(normal, pesos):
+    """Errores típicos de carga: precio en pesos en vez de dólares (queda ~40 veces más barato)
+    o un dígito de menos (USD 255 -> USD 25, queda ~10 veces más barato)."""
+    if not normal or pesos <= 0:
+        return None
+    r = normal / pesos
+    d = CONFIG["dolar_en_pesos"]
+    if d * 0.8 <= r <= d * 1.25:
+        return "moneda"
+    if 9.3 <= r <= 11:
+        return "digito"
+    return None
+
+
+def texto_error(tipo, normal):
+    normal_txt = f"$ {normal:,.0f}".replace(",", ".")
+    usd = f"USD {normal / CONFIG['dolar_en_pesos']:,.0f}".replace(",", ".")
+    if tipo == "moneda":
+        return (f"💱 POSIBLE ERROR DE MONEDA: normalmente sale {normal_txt} (≈ {usd}). "
+                f"Parece cargado en pesos en vez de dólares.")
+    return f"🔢 POSIBLE NÚMERO MAL CARGADO (le falta un dígito): normalmente sale {normal_txt} (≈ {usd})."
+
+
 def revisar_tienda(t, prods, hist, ahora):
     alertas, caidas = [], 0
     grupos = precios_por_familia(t, prods)
@@ -479,6 +502,7 @@ def revisar_tienda(t, prods, hist, ahora):
         pesos = a_pesos(p["precio"], p.get("moneda"), t)
         h = hist.get(clave)
         motivo = None
+        error_carga = None  # "moneda" o "digito": se avisa enseguida y primero
 
         if h:
             referencia = statistics.median(h["p"])
@@ -489,6 +513,9 @@ def revisar_tienda(t, prods, hist, ahora):
                     h["a"] = True
                 antes = f"$ {referencia:,.0f}".replace(",", ".")
                 motivo = f"Antes: {antes} (−{caida:.0%})"
+                error_carga = tipo_de_error(referencia, pesos)
+                if error_carga:
+                    motivo = texto_error(error_carga, referencia)
             elif caida < CONFIG["caida_minima"] / 2:
                 h["a"] = False  # volvió a la normalidad: puede volver a avisar
             if abs(pesos - h["p"][-1]) > 0.5:
@@ -509,6 +536,10 @@ def revisar_tienda(t, prods, hist, ahora):
                 ejemplo = min(otros, key=lambda x: abs(x[0] - normal))[1]
                 motivo = motivo or (f"El mismo modelo/marca en la tienda cuesta unos {normal_txt} "
                                     f"(ej: {ejemplo[:70]})")
+                if not error_carga:
+                    error_carga = tipo_de_error(normal, pesos)
+                    if error_carga:
+                        motivo = texto_error(error_carga, normal) + f" (ej: {ejemplo[:70]})"
 
         h["v"] = ahora
         for viejo in ("k", "f"):
@@ -516,12 +547,12 @@ def revisar_tienda(t, prods, hist, ahora):
 
         # Confirmar: el precio bajo tiene que aparecer en dos revisiones seguidas
         # (si la tienda muestra un precio raro una vez y después vuelve al normal, no avisa).
-        if motivo:
+        if motivo and not error_carga:  # los errores de moneda/dígito pueden durar poco: van directo
             pend = h.get("pend")
             if not pend or abs(pesos - pend) > pend * 0.05:
                 h["pend"] = round(pesos, 2)
                 motivo = None
-        else:
+        elif not motivo:
             h.pop("pend", None)
 
         # No repetir: un producto ya avisado no se vuelve a avisar en 7 días,
@@ -537,7 +568,7 @@ def revisar_tienda(t, prods, hist, ahora):
             h["av"] = round(pesos, 2)
             h["avd"] = ahora
             alertas.append(
-                f"🚨 <b>{esc(t['nombre'])}</b>\n{esc(p['nombre'])}\n"
+                f"{'💱' if error_carga else '🚨'} <b>{esc(t['nombre'])}</b>\n{esc(p['nombre'])}\n"
                 f"Precio: <b>{mostrar_precio(p['precio'], p.get('moneda'), t)}</b>\n"
                 f"{esc(motivo)}\n{esc(p['url'])}")
     return alertas, caidas
@@ -615,6 +646,8 @@ def main():
     for k in [k for k, v in hist.items() if v.get("v", ahora) < limite]:
         del hist[k]
 
+    # Primero los posibles errores de moneda o de dígito
+    todas.sort(key=lambda a: not a.startswith("💱"))
     tope = CONFIG.get("maximo_avisos_por_vuelta", 15)
     for a in todas[:tope]:
         telegram(a)
