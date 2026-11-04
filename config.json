@@ -157,6 +157,12 @@
      "paginas": ["/catalogo"], "param_pagina": "js=1&pag", "max_paginas": 1000, "paginas_a_la_vez": 8},
 
     {"nombre": "Bazar Online Uy", "rubro": "bazar", "url": "https://bazaronlineuy.com", "tipo": "shopify"},
-    {"nombre": "Grupo Dos", "rubro": "bazar", "url": "https://grupodos.com.uy", "tipo": "grupodos", "max_paginas": 300}
+    {"nombre": "Grupo Dos", "rubro": "bazar", "url": "https://grupodos.com.uy", "tipo": "grupodos", "max_paginas": 300},
+
+    {"nombre": "Ururacer", "rubro": "motos", "sin_minimos": true, "url": "https://www.ururacer.com.uy", "tipo": "shopify"},
+    {"nombre": "All Road", "rubro": "motos", "sin_minimos": true, "url": "https://allroad.com.uy", "tipo": "woocommerce"},
+    {"nombre": "Domingo Torre", "rubro": "motos", "sin_minimos": true, "url": "https://www.domingotorre.com", "tipo": "woocommerce"},
+    {"nombre": "Delcar Motos", "rubro": "motos", "sin_minimos": true, "url": "https://delcar.com.uy", "tipo": "woocommerce"},
+    {"nombre": "Motoshop", "rubro": "motos", "sin_minimos": true, "url": "https://motoshop.com.uy", "tipo": "woocommerce", "max_paginas": 60}
   ]
 }
