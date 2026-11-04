@@ -641,6 +641,13 @@ def categoria(nombre, t):
 # ------------------------------------------------- comparar entre tiendas --
 
 MEDIDA = re.compile(r"\d+(gb|tb|mb|w|mm|cm|mts|m|l|lt|lts|kg|gr|g|v|hz|mah|btu|cc|ml|pulgadas|hp|rpm|bar|psi)")
+# Características que comparten muchos productos distintos (no son modelos): AX3000, RTX5060, LGA1700, DDR5...
+CARACTERISTICA = re.compile(r"(ax|ac|be|ad|n)\d{3,5}|(rtx|gtx|rx|gt)\d{3,4}(ti|xt|super)?|lga\d+|am\d|ddr\d.*|gddr\d.*|"
+                            r"pcie?.*|usb.*|hdmi.*|rs\d+|ps\d.*|i[3579]\d*.*|ryzen.*|wifi\d|bt\d.*|ip\d\d|"
+                            r"\d+(x\d+)+|win\d+|ios\d+|android\d+|cat\d+.*|rj\d+|sata.*|nvme.*|m2\d*|a\d{2}")
+GENERICAS = {"para", "con", "sin", "de", "del", "los", "las", "negro", "negra", "blanco", "blanca", "gris", "azul",
+             "rojo", "plata", "color", "nuevo", "original", "pack", "kit", "unidad", "unidades", "inalambrico",
+             "inalámbrico", "digital", "smart", "pro", "plus", "max", "mini", "wifi", "bluetooth", "gamer"}
 
 
 def codigos_modelo(nombre):
@@ -650,7 +657,7 @@ def codigos_modelo(nombre):
     for w in re.findall(r"[a-z0-9][a-z0-9\-/\.]{3,}[a-z0-9]", nombre.lower()):
         w = re.sub(r"[\-/\.]", "", w)
         if (len(w) >= 5 and re.search(r"[a-z]", w) and len(re.findall(r"\d", w)) >= 2
-                and not MEDIDA.fullmatch(w)):
+                and not MEDIDA.fullmatch(w) and not CARACTERISTICA.fullmatch(w)):
             out.add(w)
     return out
 
@@ -659,7 +666,13 @@ def mismo_producto(a, b):
     """Para no mezclar el aparato con un accesorio que tiene el mismo código ("Vaso para licuadora X")."""
     na, nb = f" {a.lower()} ", f" {b.lower()} "
     accesorio = lambda n: " para " in n or any(f" {x}" in n for x in CONFIG["palabras_excluidas"])
-    return accesorio(na) == accesorio(nb)
+    if accesorio(na) != accesorio(nb):
+        return False
+    # Además del código tienen que compartir palabras (marca / tipo): "Licuadora Bosch" y "LICUADORA BOSCH"
+    palabras = lambda n: {w for w in re.split(r"[^a-záéíóúñü0-9]+", n) if len(w) >= 3 and w.isalpha()} - GENERICAS
+    wa, wb = palabras(na), palabras(nb)
+    comunes = wa & wb
+    return len(comunes) >= 2 or (len(comunes) == 1 and min(len(wa), len(wb)) <= 2)
 
 
 def pesos_txt(x):
@@ -681,6 +694,9 @@ def comparar_entre_tiendas(resultados, hist, ahora):
     hace_7_dias = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d")
     for items in indice.values():
         if len({t["nombre"] for t, _, _ in items}) < 2:
+            continue
+        # un código de modelo de verdad aparece en pocos productos; si está en muchos, es una característica
+        if len({p["nombre"].lower() for _, p, _ in items}) > CONFIG.get("max_productos_por_codigo", 6):
             continue
         for t, p, pesos in items:
             clave = f"{t['nombre']}|{p['id']}"
