@@ -466,6 +466,10 @@ def minimo_por_palabra(nombre):
             # "Espada para motosierra", "Inflador para compresor": es un accesorio, no la máquina
             if " para " in n[:i + 1]:
                 return None, None
+            # El tipo de producto va al principio del nombre ("Consola Sony PS5", "Taladro Bosch").
+            # Si aparece más atrás ("Gamepad Inalámbrico Bt Sony Ps5") es un accesorio de ese producto.
+            if len(n[:i + 1].split()) >= 3:
+                continue
             return palabra, minimo
     return None, None
 
