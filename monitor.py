@@ -427,7 +427,11 @@ def minimo_por_palabra(nombre):
     if any(f" {x}" in n for x in CONFIG["palabras_excluidas"]):
         return None, None
     for palabra, minimo in CONFIG["minimos_por_palabra"].items():
-        if f" {palabra}" in n:
+        i = n.find(f" {palabra}")
+        if i >= 0:
+            # "Espada para motosierra", "Inflador para compresor": es un accesorio, no la máquina
+            if " para " in n[:i + 1]:
+                return None, None
             return palabra, minimo
     return None, None
 
@@ -482,9 +486,9 @@ def revisar_tienda(t, prods, hist, ahora):
             if referencia >= CONFIG["referencia_minima_pesos"] and caida >= CONFIG["caida_minima"]:
                 if not h.get("a"):
                     caidas += 1
-                    antes = f"$ {referencia:,.0f}".replace(",", ".")
-                    motivo = f"Antes: {antes} (−{caida:.0%})"
                     h["a"] = True
+                antes = f"$ {referencia:,.0f}".replace(",", ".")
+                motivo = f"Antes: {antes} (−{caida:.0%})"
             elif caida < CONFIG["caida_minima"] / 2:
                 h["a"] = False  # volvió a la normalidad: puede volver a avisar
             if abs(pesos - h["p"][-1]) > 0.5:
@@ -494,35 +498,44 @@ def revisar_tienda(t, prods, hist, ahora):
 
         palabra, minimo = minimo_por_palabra(p["nombre"])
         if minimo and pesos < minimo * CONFIG.get("factor_minimos", 1):
-            if not h.get("k"):
-                motivo = motivo or f"Muy barato para un/a {palabra} (menos de $ {minimo:,}".replace(",", ".") + ")"
-                h["k"] = True
-        else:
-            h["k"] = False
+            motivo = motivo or f"Muy barato para un/a {palabra} (menos de $ {minimo:,}".replace(",", ".") + ")"
 
         # Comparación con productos parecidos de la misma tienda (sirve aunque sea la primera vez que lo ve)
         otros = [(pz, n) for i, pz, n in grupos.get(familia(p["nombre"], p.get("marca")) or "", []) if i != p["id"]]
         if len(otros) >= CONFIG.get("parecidos_minimos", 1):
             normal = statistics.median(pz for pz, _ in otros)
             if normal >= CONFIG.get("valor_minimo_parecidos", 0) and pesos < normal * CONFIG.get("fraccion_vs_parecidos", 0.25):
-                if not h.get("f"):
-                    normal_txt = f"$ {normal:,.0f}".replace(",", ".")
-                    ejemplo = min(otros, key=lambda x: abs(x[0] - normal))[1]
-                    motivo = motivo or (f"El mismo modelo/marca en la tienda cuesta unos {normal_txt} "
-                                        f"(ej: {ejemplo[:70]})")
-                    h["f"] = True
-            else:
-                h["f"] = False
+                normal_txt = f"$ {normal:,.0f}".replace(",", ".")
+                ejemplo = min(otros, key=lambda x: abs(x[0] - normal))[1]
+                motivo = motivo or (f"El mismo modelo/marca en la tienda cuesta unos {normal_txt} "
+                                    f"(ej: {ejemplo[:70]})")
 
         h["v"] = ahora
-        # No repetir: si ya se avisó este producto a este precio (o menos), no se vuelve a avisar.
-        # Se "olvida" el aviso recién cuando el precio vuelve a subir bastante.
-        if h.get("av") and pesos > h["av"] * 1.5:
-            h.pop("av")
+        for viejo in ("k", "f"):
+            h.pop(viejo, None)
+
+        # Confirmar: el precio bajo tiene que aparecer en dos revisiones seguidas
+        # (si la tienda muestra un precio raro una vez y después vuelve al normal, no avisa).
+        if motivo:
+            pend = h.get("pend")
+            if not pend or abs(pesos - pend) > pend * 0.05:
+                h["pend"] = round(pesos, 2)
+                motivo = None
+        else:
+            h.pop("pend", None)
+
+        # No repetir: un producto ya avisado no se vuelve a avisar en 7 días,
+        # aunque el precio suba y baje, salvo que baje todavía más (5% o más).
+        if h.get("av"):
+            h.setdefault("avd", ahora)  # avisos viejos (antes de este cambio): cuentan desde hoy
+        if h.get("av") and h["avd"] < (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d"):
+            h.pop("av", None)
+            h.pop("avd", None)
         if motivo and h.get("av") and pesos >= h["av"] * 0.95:
             motivo = None
         if motivo:
             h["av"] = round(pesos, 2)
+            h["avd"] = ahora
             alertas.append(
                 f"🚨 <b>{esc(t['nombre'])}</b>\n{esc(p['nombre'])}\n"
                 f"Precio: <b>{mostrar_precio(p['precio'], p.get('moneda'), t)}</b>\n"
