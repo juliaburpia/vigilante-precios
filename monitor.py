@@ -484,7 +484,38 @@ def leer_magento(t):
     return out
 
 
-LECTORES = {"shopify": leer_shopify, "odoo": leer_odoo, "magento": leer_magento, "html_rapido": leer_html_rapido, "woocommerce": leer_woocommerce,
+def leer_grupodos(t):
+    """Grupo Dos (bazar): /tienda?page=N, 24 productos por página; pasada la última repite productos."""
+    base, out, vistos = t["url"], [], set()
+    lote, pag = t.get("paginas_a_la_vez", 6), 1
+    while pag <= t.get("max_paginas", 300) and queda_tiempo():
+        urls = [f"{base}/tienda" + (f"?page={n}" if n > 1 else "") for n in range(pag, pag + lote)]
+        with ThreadPoolExecutor(max_workers=lote) as ex:
+            respuestas = list(ex.map(pedir, urls))
+        nuevos = 0
+        for r in respuestas:
+            if not r:
+                continue
+            for blk in r.text.split('<article class="gt">')[1:]:
+                tit = re.search(r'class="gt__titulo"><a href="([^"]+)">(.*?)</a>', blk, re.S)
+                pre = re.search(r'class="gd-precio__actual">(.*?)</span>', blk, re.S)
+                if not (tit and pre):
+                    continue
+                url = urljoin(base + "/", tit.group(1))
+                precio = a_numero(re.sub(r"<[^>]+>", "", pre.group(1)))
+                if not precio or url in vistos:
+                    continue
+                vistos.add(url)
+                nuevos += 1
+                out.append(dict(id="g" + tit.group(1).rsplit("/", 1)[-1], nombre=html.unescape(re.sub(r"<[^>]+>", "", tit.group(2))).strip(),
+                                precio=precio, moneda="USD" if re.search(r"U\$S|USD|US\$", pre.group(1)) else "UYU", url=url))
+        if not nuevos:
+            break
+        pag += lote
+    return out
+
+
+LECTORES = {"grupodos": leer_grupodos, "shopify": leer_shopify, "odoo": leer_odoo, "magento": leer_magento, "html_rapido": leer_html_rapido, "woocommerce": leer_woocommerce,
             "vtex": leer_vtex, "html": leer_html, "loi": leer_loi, "sodimac": leer_sodimac,
             "carlos_gutierrez": leer_carlos_gutierrez}
 
@@ -526,7 +557,9 @@ def minimo_por_palabra(nombre):
     if any(f" {x}" in n for x in CONFIG["palabras_excluidas"]):
         return None, None
     for palabra, minimo in CONFIG["minimos_por_palabra"].items():
-        i = n.find(f" {palabra}")
+        # palabra entera: "tablet" no tiene que coincidir con "Tableta de chocolate"
+        m = re.search(r"(?<![a-záéíóúñü])" + re.escape(palabra) + r"(s|es)?(?![a-záéíóúñü])", n)
+        i = m.start() - 1 if m else -1
         if i >= 0:
             # "Espada para motosierra", "Inflador para compresor": es un accesorio, no la máquina
             if " para " in n[:i + 1]:
@@ -643,7 +676,7 @@ def revisar_tienda(t, prods, hist, ahora):
         else:
             h = hist[clave] = {"p": [round(pesos, 2)], "a": False}
 
-        palabra, minimo = minimo_por_palabra(p["nombre"])
+        palabra, minimo = (None, None) if t.get("sin_minimos") else minimo_por_palabra(p["nombre"])
         if minimo and pesos < minimo * CONFIG.get("factor_minimos", 1):
             motivo = motivo or f"Muy barato para un/a {palabra} (menos de $ {minimo:,}".replace(",", ".") + ")"
 
@@ -696,11 +729,12 @@ def revisar_tienda(t, prods, hist, ahora):
 
 def categoria(nombre, t):
     """hogar, ferreteria o tecnologia: primero por palabras del nombre, si no por el rubro de la tienda."""
-    if t.get("rubro") == "farmacia":  # todo lo de las farmacias va al grupo Farmacia
-        return "farmacia"
+    if t.get("rubro") in ("farmacia", "bazar"):  # todo lo de esas tiendas va a su grupo
+        return t["rubro"]
     n = f" {nombre.lower()} "
     for cat in ("tecnologia", "ferreteria", "hogar"):
-        if any(f" {w}" in n for w in CONFIG.get("palabras_por_categoria", {}).get(cat, [])):
+        if any(re.search(r"(?<![a-záéíóúñü])" + re.escape(w.strip()) + r"(s|es)?(?![a-záéíóúñü])", n)
+               for w in CONFIG.get("palabras_por_categoria", {}).get(cat, [])):
             return cat
     return t.get("rubro", "hogar")
 
@@ -898,7 +932,7 @@ def main():
     # Primero los posibles errores de moneda o de dígito
     todas.sort(key=lambda a: not a[1].startswith("💱"))
     tope = CONFIG.get("maximo_avisos_por_vuelta", 15)
-    for cat in ("hogar", "ferreteria", "tecnologia", "farmacia"):
+    for cat in ("hogar", "ferreteria", "tecnologia", "farmacia", "bazar"):
         de_cat = [texto for c, texto in todas if c == cat]
         for texto in de_cat[:tope]:
             telegram(texto, cat)
@@ -907,7 +941,7 @@ def main():
     if REPORTE:
         telegram("📋 <b>Reporte del vigilante</b>\n" + "\n".join(esc(x) for x in resumen))
         for cat, nombre in (("hogar", "Hogar"), ("ferreteria", "Ferretería"), ("tecnologia", "Tecnología"),
-                            ("farmacia", "Farmacia")):
+                            ("farmacia", "Farmacia"), ("bazar", "Bazar")):
             if (CONFIG.get("grupos_telegram") or {}).get(cat):
                 telegram(f"✅ Grupo {nombre} conectado al vigilante. Acá te van a llegar los avisos de {nombre.lower()}.", cat)
 
