@@ -103,7 +103,9 @@
     "control remoto", "filtro", "bolsa", "tapa", "mochila", "sobre", "skin",
     "mecha", "broca", "disco", "accesorio", "batería para", "lámpara para",
     "manguera", "burlete", "cepillo", "kit de limpieza", "juego para", "sticker",
-    "hormigón celular", "hormigon celular"
+    "hormigón celular", "hormigon celular",
+    "gamepad", "joystick", "dualsense", "control inalámbrico", "control inalambrico", "mando", "volante",
+    "juego", "videojuego", "headset", "auricular"
   ],
 
   "tiendas": [
