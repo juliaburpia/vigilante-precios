@@ -111,6 +111,8 @@
     {"nombre": "Ferrefix", "url": "https://ferrefixuru.com"},
 
     {"nombre": "Tiendas Montevideo", "url": "https://www.tiendasmontevideo.com.uy", "tipo": "woocommerce", "max_paginas": 60},
-    {"nombre": "Tienda Montevideo Portal", "url": "https://tienda.montevideo.com.uy", "tipo": "odoo", "max_paginas": 600}
+    {"nombre": "Tienda Montevideo Portal", "url": "https://tienda.montevideo.com.uy", "tipo": "odoo", "max_paginas": 600},
+    {"nombre": "AMV Store", "url": "https://amvstore.com.uy", "tipo": "html",
+     "paginas": ["/catalogo"], "param_pagina": "js=1&pag", "max_paginas": 260}
   ]
 }
