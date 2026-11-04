@@ -68,7 +68,8 @@
   "grupos_telegram": {
     "hogar": "-5434073829",
     "ferreteria": "-5359222688",
-    "tecnologia": "-5455947180"
+    "tecnologia": "-5455947180",
+    "farmacia": "-5587773198"
   },
 
   "palabras_por_categoria": {
@@ -147,6 +148,11 @@
     {"nombre": "Tiendas Montevideo", "url": "https://www.tiendasmontevideo.com.uy", "tipo": "woocommerce", "max_paginas": 60},
     {"nombre": "Tienda Montevideo Portal", "rubro": "tecnologia", "url": "https://tienda.montevideo.com.uy", "tipo": "odoo", "max_paginas": 600},
     {"nombre": "AMV Store", "rubro": "tecnologia", "url": "https://amvstore.com.uy", "tipo": "html",
-     "paginas": ["/catalogo"], "param_pagina": "js=1&pag", "max_paginas": 260}
+     "paginas": ["/catalogo"], "param_pagina": "js=1&pag", "max_paginas": 260},
+
+    {"nombre": "Farmashop", "rubro": "farmacia", "url": "https://tienda.farmashop.com.uy", "tipo": "magento",
+     "max_paginas": 80, "paginas_a_la_vez": 10},
+    {"nombre": "San Roque", "rubro": "farmacia", "url": "https://www.sanroque.com.uy", "tipo": "html_rapido",
+     "paginas": ["/catalogo"], "param_pagina": "js=1&pag", "max_paginas": 1000, "paginas_a_la_vez": 8}
   ]
 }
