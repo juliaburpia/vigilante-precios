@@ -74,6 +74,23 @@
     "motos": "-5598422259"
   },
 
+  "filtros_por_rubro": {
+    "farmacia": {
+      "incluir": [
+        "perfume", "perfumes", "fragancia", "fragancias", "eau de parfum", "eau de toilette", "edp", "edt",
+        "colonia", "body splash", "body mist", "parfum",
+        "crema", "cremas", "sérum", "serum", "hidratante", "emulsión", "emulsion", "loción", "locion",
+        "contorno de ojos", "antiarrugas", "antiedad", "anti-edad", "gel crema", "bálsamo", "balsamo",
+        "protector solar", "protectores solares", "solar", "solares", "fps", "spf", "bloqueador",
+        "autobronceante", "bronceador", "after sun", "post solar"
+      ],
+      "excluir": [
+        "dental", "dientes", "afeitar", "peinar", "enjuague", "acondicionador", "pañal", "pañales",
+        "coloración", "coloracion", "tintura", "depilatoria", "comprimidos", "cápsulas", "capsulas"
+      ]
+    }
+  },
+
   "palabras_por_categoria": {
     "tecnologia": [
       "notebook", "laptop", "macbook", "imac", "iphone", "ipad", "celular", "smartphone", "tablet",
