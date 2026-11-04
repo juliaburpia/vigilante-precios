@@ -701,6 +701,10 @@ def comparar_entre_tiendas(resultados, hist, ahora):
                 h.pop("xpend", None)
                 continue
             revisados.add(clave)
+            ej = min(por_tienda.items(), key=lambda x: abs(x[1][0] - normal))
+            print(f"[comparar] {t['nombre']} | {p['nombre'][:70]} | {pesos_txt(pesos)} vs {pesos_txt(normal)} | ej {ej[0]}: {ej[1][1][:70]}")
+            if CONFIG.get("comparar_entre_tiendas", "log") == "log":  # modo prueba: solo anota en el registro
+                continue
             en_usd = (p.get("moneda") or t.get("moneda") or "UYU").upper().strip() in EN_DOLARES
             error_carga, _ = tipo_de_error([normal], pesos, p["precio"], en_usd, exacto=False)
             if not error_carga:  # confirmar en dos revisiones seguidas
