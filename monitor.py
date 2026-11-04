@@ -385,7 +385,41 @@ def leer_sodimac(t):
     return out
 
 
-LECTORES = {"shopify": leer_shopify, "woocommerce": leer_woocommerce,
+def leer_odoo(t):
+    """Tiendas hechas con Odoo (Tienda Montevideo Portal): /shop/page/N, 20 productos por página.
+    Pasada la última página, Odoo repite la última: se corta cuando no aparecen productos nuevos."""
+    base, out, vistos = t["url"], [], set()
+    lote, pag = t.get("paginas_a_la_vez", 6), 1
+    while pag <= t.get("max_paginas", 600) and queda_tiempo():
+        urls = [f"{base}/shop" + (f"/page/{n}" if n > 1 else "") for n in range(pag, pag + lote)]
+        with ThreadPoolExecutor(max_workers=lote) as ex:
+            respuestas = list(ex.map(pedir, urls))
+        nuevos = 0
+        for r in respuestas:
+            if not r:
+                continue
+            for blk in r.text.split('class="oe_product_cart"')[1:]:
+                url = re.search(r'itemprop="name" href="([^"?]+)', blk)
+                nom = re.search(r'itemprop="name"[^>]*>([^<]+)</a>', blk)
+                pre = re.search(r'itemprop="price"[^>]*>([\d.]+)<', blk)
+                mon = re.search(r'itemprop="priceCurrency"[^>]*>([A-Z]+)<', blk)
+                if not (url and nom and pre):
+                    continue
+                pid = url.group(1).rsplit("-", 1)[-1]
+                if pid in vistos:
+                    continue
+                vistos.add(pid)
+                nuevos += 1
+                out.append(dict(id=f"o{pid}", nombre=html.unescape(nom.group(1)).strip(),
+                                precio=float(pre.group(1)), moneda=mon.group(1) if mon else None,
+                                url=urljoin(base + "/", url.group(1))))
+        if not nuevos:
+            break
+        pag += lote
+    return out
+
+
+LECTORES = {"shopify": leer_shopify, "odoo": leer_odoo, "woocommerce": leer_woocommerce,
             "vtex": leer_vtex, "html": leer_html, "loi": leer_loi, "sodimac": leer_sodimac,
             "carlos_gutierrez": leer_carlos_gutierrez}
 
