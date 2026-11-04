@@ -469,27 +469,42 @@ def precios_por_familia(t, prods):
     return grupos
 
 
-def tipo_de_error(normal, pesos):
-    """Errores típicos de carga: precio en pesos en vez de dólares (queda ~40 veces más barato)
-    o un dígito de menos (USD 255 -> USD 25, queda ~10 veces más barato)."""
-    if not normal or pesos <= 0:
-        return None
-    r = normal / pesos
+def le_falta_un_digito(normal, precio):
+    """263 -> 26, 63 o 23: el precio nuevo es el normal con un número de menos."""
+    a, b = str(round(normal)), str(round(precio))
+    return len(b) == len(a) - 1 and any(a[:i] + a[i + 1:] == b for i in range(len(a)))
+
+
+def tipo_de_error(normales, pesos, precio, en_usd, exacto=True):
+    """Errores típicos de carga. Devuelve (tipo, precio normal en pesos) o (None, None).
+    - "moneda": lo cargaron en pesos en vez de dólares (queda ~40 veces más barato).
+    - "digito": le falta un número (USD 263 -> USD 26, 63 o 23)."""
     d = CONFIG["dolar_en_pesos"]
-    if d * 0.8 <= r <= d * 1.25:
-        return "moneda"
-    if 9.3 <= r <= 11:
-        return "digito"
-    return None
+    for normal in sorted(set(normales), reverse=True):
+        if pesos <= 0 or normal < CONFIG["referencia_minima_pesos"]:
+            continue
+        r = normal / pesos
+        if d * 0.8 <= r <= d * 1.25:
+            return "moneda", normal
+        # comparar en la misma moneda en que lo muestra la tienda
+        if exacto and r >= 2.5 and le_falta_un_digito(normal / d if en_usd else normal, precio):
+            return "digito", normal
+        if 9.3 <= r <= 11:
+            return "digito", normal
+    return None, None
 
 
-def texto_error(tipo, normal):
-    normal_txt = f"$ {normal:,.0f}".replace(",", ".")
-    usd = f"USD {normal / CONFIG['dolar_en_pesos']:,.0f}".replace(",", ".")
+def texto_error(tipo, normal, en_usd):
+    d = CONFIG["dolar_en_pesos"]
+    normal_txt = (f"USD {normal / d:,.0f}" if en_usd else f"$ {normal:,.0f}").replace(",", ".")
+    if tipo == "moneda" and en_usd:
+        return (f"💱 POSIBLE ERROR DE MONEDA: normalmente sale {normal_txt} "
+                f"y ahora figura unas {d} veces más barato.")
     if tipo == "moneda":
+        usd = f"USD {normal / d:,.0f}".replace(",", ".")
         return (f"💱 POSIBLE ERROR DE MONEDA: normalmente sale {normal_txt} (≈ {usd}). "
                 f"Parece cargado en pesos en vez de dólares.")
-    return f"🔢 POSIBLE NÚMERO MAL CARGADO (le falta un dígito): normalmente sale {normal_txt} (≈ {usd})."
+    return f"🔢 POSIBLE NÚMERO MAL CARGADO (le falta un dígito): normalmente sale {normal_txt}."
 
 
 def revisar_tienda(t, prods, hist, ahora):
@@ -503,6 +518,7 @@ def revisar_tienda(t, prods, hist, ahora):
         h = hist.get(clave)
         motivo = None
         error_carga = None  # "moneda" o "digito": se avisa enseguida y primero
+        en_usd = (p.get("moneda") or t.get("moneda") or "UYU").upper().strip() in EN_DOLARES
 
         if h:
             referencia = statistics.median(h["p"])
@@ -513,11 +529,12 @@ def revisar_tienda(t, prods, hist, ahora):
                     h["a"] = True
                 antes = f"$ {referencia:,.0f}".replace(",", ".")
                 motivo = f"Antes: {antes} (−{caida:.0%})"
-                error_carga = tipo_de_error(referencia, pesos)
-                if error_carga:
-                    motivo = texto_error(error_carga, referencia)
             elif caida < CONFIG["caida_minima"] / 2:
                 h["a"] = False  # volvió a la normalidad: puede volver a avisar
+            # Errores de carga: se comparan contra los precios que tuvo antes (aunque la caída sea menor al 80%)
+            error_carga, normal_err = tipo_de_error(h["p"], pesos, p["precio"], en_usd)
+            if error_carga:
+                motivo = texto_error(error_carga, normal_err, en_usd)
             if abs(pesos - h["p"][-1]) > 0.5:
                 h["p"] = (h["p"] + [round(pesos, 2)])[-8:]
         else:
@@ -537,9 +554,9 @@ def revisar_tienda(t, prods, hist, ahora):
                 motivo = motivo or (f"El mismo modelo/marca en la tienda cuesta unos {normal_txt} "
                                     f"(ej: {ejemplo[:70]})")
                 if not error_carga:
-                    error_carga = tipo_de_error(normal, pesos)
+                    error_carga, _ = tipo_de_error([normal], pesos, p["precio"], en_usd, exacto=False)
                     if error_carga:
-                        motivo = texto_error(error_carga, normal) + f" (ej: {ejemplo[:70]})"
+                        motivo = texto_error(error_carga, normal, en_usd) + f" (ej: {ejemplo[:70]})"
 
         h["v"] = ahora
         for viejo in ("k", "f"):
