@@ -454,12 +454,14 @@ def leer_magento(t):
     tam, raiz = t.get("por_pagina", 300), t.get("categoria_raiz", "Mg==")
 
     def pagina(n):
-        try:
-            r = S.post(f"{base}/graphql", json={"query": consulta % (raiz, tam, n)}, timeout=90)
-            return r.json()["data"]["products"]
-        except Exception as e:
-            ESTADOS[urlparse(base).netloc] = type(e).__name__
-            return None
+        for intento in range(3):  # a veces la tienda contesta mal una vez: se reintenta
+            try:
+                r = S.post(f"{base}/graphql", json={"query": consulta % (raiz, tam, n)}, timeout=90)
+                return r.json()["data"]["products"]
+            except Exception as e:
+                ESTADOS[urlparse(base).netloc] = type(e).__name__
+                time.sleep(3)
+        return None
 
     primera = pagina(1)
     if not primera:
@@ -496,9 +498,9 @@ def leer_grupodos(t):
         for r in respuestas:
             if not r:
                 continue
-            for blk in r.text.split('<article class="gt">')[1:]:
-                tit = re.search(r'class="gt__titulo"><a href="([^"]+)">(.*?)</a>', blk, re.S)
-                pre = re.search(r'class="gd-precio__actual">(.*?)</span>', blk, re.S)
+            for blk in r.text.split('class="tref"')[1:]:
+                tit = re.search(r'class="tref__titulo"><a href="([^"]+)">(.*?)</a>', blk, re.S)
+                pre = re.search(r'class="tref__actual">(?:<span[^>]*>.*?</span>)?(.*?)</span>', blk, re.S)
                 if not (tit and pre):
                     continue
                 url = urljoin(base + "/", tit.group(1))
