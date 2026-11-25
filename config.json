@@ -74,6 +74,11 @@
     "motos": "-5598422259"
   },
 
+  "ajustes_por_rubro": {
+    "farmacia": {"caida_minima": 0.6, "valor_minimo_parecidos": 800, "fraccion_vs_parecidos": 0.3,
+                 "parecidos_minimos": 2, "referencia_minima_pesos": 300}
+  },
+
   "filtros_por_rubro": {
     "farmacia": {
       "incluir": [
@@ -121,7 +126,9 @@
     "funda", "estuche", "case", "vidrio", "film", "lámina", "protector",
     "cable", "cargador", "adaptador", "soporte", "correa", "malla", "repuesto",
     "control remoto", "filtro", "bolsa", "tapa", "mochila", "sobre", "skin",
-    "mecha", "broca", "disco", "accesorio", "batería para", "lámpara para",
+    "mecha", "broca", "disco", "accesorio", "p/", "carbones", "carbón", "carbon ", "cadena", "lima ", "limas",
+    "piedra", "vaina", "plato", "tobera", "espada", "cuchilla", "hoja", "estaño", "esta\u00f1o", "bujía", "bujia",
+    "cabezal", "carretel", "tanza", "rueda", "kit de", "manija", "gatillo", "pistola para", "batería para", "lámpara para",
     "manguera", "burlete", "cepillo", "kit de limpieza", "juego para", "sticker",
     "hormigón celular", "hormigon celular",
     "gamepad", "joystick", "dualsense", "control inalámbrico", "control inalambrico", "mando", "volante",
