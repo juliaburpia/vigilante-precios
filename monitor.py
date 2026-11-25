@@ -562,7 +562,7 @@ def minimo_por_palabra(nombre):
         i = m.start() - 1 if m else -1
         if i >= 0:
             # "Espada para motosierra", "Inflador para compresor": es un accesorio, no la máquina
-            if " para " in n[:i + 1]:
+            if " para " in n[:i + 1] or " p/" in n[:i + 2] or "p/" in n[max(0, i - 2):i + 1]:
                 return None, None
             # El tipo de producto va al principio del nombre ("Consola Sony PS5", "Taladro Bosch").
             # Si aparece más atrás ("Gamepad Inalámbrico Bt Sony Ps5") es un accesorio de ese producto.
@@ -643,6 +643,12 @@ def texto_error(tipo, normal, en_usd):
     return f"🔢 POSIBLE NÚMERO MAL CARGADO (le falta un dígito): normalmente sale {normal_txt}."
 
 
+def ajuste(t, clave, defecto=None):
+    """Valor de config.json, con la opción de cambiarlo por rubro (config.json -> ajustes_por_rubro)."""
+    por_rubro = (CONFIG.get("ajustes_por_rubro") or {}).get(t.get("rubro")) or {}
+    return por_rubro.get(clave, CONFIG.get(clave, defecto))
+
+
 def revisar_tienda(t, prods, hist, ahora):
     alertas, caidas = [], 0
     grupos = precios_por_familia(t, prods)
@@ -657,15 +663,18 @@ def revisar_tienda(t, prods, hist, ahora):
         en_usd = (p.get("moneda") or t.get("moneda") or "UYU").upper().strip() in EN_DOLARES
 
         if h:
-            referencia = statistics.median(h["p"])
+            # Si el último precio guardado ya es este precio bajo (se vio en la vuelta anterior y está
+            # esperando confirmación), se compara contra los precios de antes, para que no "se diluya".
+            previos = h["p"][:-1] if len(h["p"]) > 1 and abs(h["p"][-1] - pesos) <= pesos * 0.05 else h["p"]
+            referencia = statistics.median(previos)
             caida = 1 - pesos / referencia if referencia else 0
-            if referencia >= CONFIG["referencia_minima_pesos"] and caida >= CONFIG["caida_minima"]:
+            if referencia >= ajuste(t, "referencia_minima_pesos") and caida >= ajuste(t, "caida_minima"):
                 if not h.get("a"):
                     caidas += 1
                     h["a"] = True
                 antes = f"$ {referencia:,.0f}".replace(",", ".")
                 motivo = f"Antes: {antes} (−{caida:.0%})"
-            elif caida < CONFIG["caida_minima"] / 2:
+            elif caida < ajuste(t, "caida_minima") / 2:
                 h["a"] = False  # volvió a la normalidad: puede volver a avisar
             # Errores de carga: se comparan contra los precios que tuvo antes (aunque la caída sea menor al 80%)
             error_carga, normal_err = tipo_de_error(h["p"], pesos, p["precio"], en_usd)
@@ -682,9 +691,9 @@ def revisar_tienda(t, prods, hist, ahora):
 
         # Comparación con productos parecidos de la misma tienda (sirve aunque sea la primera vez que lo ve)
         otros = [(pz, n) for i, pz, n in grupos.get(familia(p["nombre"], p.get("marca")) or "", []) if i != p["id"]]
-        if len(otros) >= CONFIG.get("parecidos_minimos", 1):
+        if len(otros) >= ajuste(t, "parecidos_minimos", 1):
             normal = statistics.median(pz for pz, _ in otros)
-            if normal >= CONFIG.get("valor_minimo_parecidos", 0) and pesos < normal * CONFIG.get("fraccion_vs_parecidos", 0.25):
+            if normal >= ajuste(t, "valor_minimo_parecidos", 0) and pesos < normal * ajuste(t, "fraccion_vs_parecidos", 0.25):
                 normal_txt = f"$ {normal:,.0f}".replace(",", ".")
                 ejemplo = min(otros, key=lambda x: abs(x[0] - normal))[1]
                 motivo = motivo or (f"El mismo modelo/marca en la tienda cuesta unos {normal_txt} "
@@ -708,13 +717,19 @@ def revisar_tienda(t, prods, hist, ahora):
         elif not motivo:
             h.pop("pend", None)
 
-        # No repetir: un producto ya avisado no se vuelve a avisar en 7 días,
+        # No repetir: un producto ya avisado no se vuelve a avisar mientras siga barato,
         # aunque el precio suba y baje, salvo que baje todavía más (5% o más).
+        # Se "olvida" el aviso recién cuando el precio volvió a lo normal (subió 50% o más sobre el avisado)
+        # y se mantuvo así 3 días.
         if h.get("av"):
-            h.setdefault("avd", ahora)  # avisos viejos (antes de este cambio): cuentan desde hoy
-        if h.get("av") and h["avd"] < (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d"):
-            h.pop("av", None)
-            h.pop("avd", None)
+            h.setdefault("avd", ahora)
+            if not motivo and pesos >= h["av"] * 1.5:
+                h.setdefault("avn", ahora)
+                if h["avn"] < (datetime.now(timezone.utc) - timedelta(days=3)).strftime("%Y-%m-%d"):
+                    for x in ("av", "avd", "avn"):
+                        h.pop(x, None)
+            else:
+                h.pop("avn", None)
         if motivo and h.get("av") and pesos >= h["av"] * 0.95:
             motivo = None
         if motivo:
@@ -792,7 +807,6 @@ def comparar_entre_tiendas(resultados, hist, ahora):
                 indice.setdefault(c, []).append((t, p, pesos))
 
     alertas, revisados = [], set()
-    hace_7_dias = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d")
     for items in indice.values():
         if len({t["nombre"] for t, _, _ in items}) < 2:
             continue
@@ -834,7 +848,7 @@ def comparar_entre_tiendas(resultados, hist, ahora):
                     h["xpend"] = round(pesos, 2)
                     continue
             # no repetir (comparte el registro con los otros avisos)
-            if h.get("av") and h.get("avd", ahora) >= hace_7_dias and pesos >= h["av"] * 0.95:
+            if h.get("av") and pesos >= h["av"] * 0.95:
                 continue
             h["av"], h["avd"] = round(pesos, 2), ahora
             tienda_ej, (precio_ej, nombre_ej) = min(por_tienda.items(), key=lambda x: abs(x[1][0] - normal))
@@ -858,10 +872,18 @@ def telegram(texto, cat=None):
         return
     for i in range(0, len(texto), 3900):
         try:
-            S.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-                   data={"chat_id": destino, "text": texto[i:i + 3900],
-                         "parse_mode": "HTML", "disable_web_page_preview": "false"},
-                   timeout=20)
+            r = S.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+                       data={"chat_id": destino, "text": texto[i:i + 3900],
+                             "parse_mode": "HTML", "disable_web_page_preview": "false"},
+                       timeout=20)
+            d = json_de(r) or {}
+            if not d.get("ok"):
+                nuevo = (d.get("parameters") or {}).get("migrate_to_chat_id")
+                print(f"❌ Telegram rechazó el aviso al grupo {cat} ({destino}): {d.get('description') or r.status_code}"
+                      + (f" -> el grupo ahora tiene el número {nuevo}, hay que cambiarlo en config.json" if nuevo else ""))
+                if nuevo:  # el grupo pasó a supergrupo: reintentar con el número nuevo
+                    S.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+                           data={"chat_id": nuevo, "text": texto[i:i + 3900], "parse_mode": "HTML"}, timeout=20)
         except requests.RequestException as e:
             print("Error enviando a Telegram:", e)
 
@@ -944,6 +966,13 @@ def main():
     # Primero los posibles errores de moneda o de dígito
     todas.sort(key=lambda a: not a[1].startswith("💱"))
     tope = CONFIG.get("maximo_avisos_por_vuelta", 15)
+    unicos, vistos_txt = [], set()
+    for c, texto in todas:
+        llave = (c, texto.split("\n")[1].lower().strip() if "\n" in texto else texto, texto.split("Precio:")[-1][:30])
+        if llave not in vistos_txt:
+            vistos_txt.add(llave)
+            unicos.append((c, texto))
+    todas = unicos
     for cat in ("hogar", "ferreteria", "tecnologia", "farmacia", "bazar", "motos"):
         de_cat = [texto for c, texto in todas if c == cat]
         for texto in de_cat[:tope]:
